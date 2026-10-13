@@ -32,13 +32,29 @@ export function Nav() {
   const path = usePathname();
   const sb = useMemo(() => createClient(), []);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
   const hidden = HIDDEN.some((p) => path.startsWith(p));
   useEffect(() => {
     if (hidden) return;
-    sb.rpc("is_admin").then(({ data }: { data: boolean | null }) => setIsAdmin(!!data));
+    (async () => {
+      const { data: s } = await sb.auth.getSession();
+      const uid = s.session?.user.id;
+      if (!uid) return;
+      const { data } = await sb.from("profiles").select("role, pt_estado").eq("id", uid).maybeSingle();
+      setIsAdmin(data?.role === "admin");
+      setIsTrainer(data?.pt_estado === "aprovado");
+    })();
   }, [sb, hidden]);
   if (hidden) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+  const mobileLinks: { href: string; label: string; icon: IconName }[] = isTrainer
+    ? [...LINKS.slice(0, 3), { href: "/clientes", label: "Clientes", icon: "users" }, LINKS[3]]
+    : LINKS;
+  const desktopLinks: { href: string; label: string; icon: IconName }[] = [
+    ...LINKS,
+    ...(isTrainer ? [{ href: "/clientes", label: "Clientes", icon: "users" as IconName }] : []),
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "gauge" as IconName }] : []),
+  ];
 
   return (
     <>
@@ -47,7 +63,7 @@ export function Nav() {
         <nav className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6" aria-label="Principal">
           <Logo />
           <ul className="flex items-center gap-1">
-            {[...LINKS, ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "gauge" as IconName }] : [])].map((l) => (
+            {desktopLinks.map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}
@@ -70,8 +86,8 @@ export function Nav() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
         aria-label="Principal"
       >
-        <ul className="mx-auto grid max-w-md grid-cols-4">
-          {LINKS.map((l) => {
+        <ul className={`mx-auto grid max-w-md ${mobileLinks.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+          {mobileLinks.map((l) => {
             const active = isActive(l.href);
             return (
               <li key={l.href}>

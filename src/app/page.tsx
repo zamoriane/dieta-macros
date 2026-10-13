@@ -83,8 +83,9 @@ export default function HojePage() {
     try {
       const p = await getProfile(sb);
       setProfile(p);
+      const uid = p.id;
       if (dia === today) await ensureDay(sb, dia);
-      const { data: d } = await sb.from("days").select("dia").eq("dia", dia).maybeSingle();
+      const { data: d } = await sb.from("days").select("dia").eq("user_id", uid).eq("dia", dia).maybeSingle();
       setDayExists(!!d);
       const src = p.fonte_atividade ?? "oura";
       const [its, yits, w, od, plan, prev, avg, hd] = await Promise.all([
@@ -93,7 +94,7 @@ export default function HojePage() {
         latestWeight(sb, dia),
         getActivityDays(sb, dia, dia, src),
         getPlan(sb),
-        sb.from("daily_totals").select("dia,kcal").gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
+        sb.from("daily_totals").select("dia,kcal").eq("user_id", uid).gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
         avgOuraActive(sb, dia, 14, src),
         getHealthDays(sb, dia, dia),
       ]);

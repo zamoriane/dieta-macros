@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { scale } from "@/lib/nutrition";
-import { addDays, getUserId, isoDay, type Food } from "@/lib/data";
+import { addDays, getUserId, isoDay, me, type Food } from "@/lib/data";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { Icon } from "@/components/ui/Icon";
 import { FormField } from "@/components/ui/Primitives";
@@ -30,9 +30,11 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
   // Recentes: alimentos usados nos últimos 30 dias
   useEffect(() => {
     (async () => {
+      const uid = await me(sb);
       const { data } = await sb
         .from("log_items")
         .select("food_id")
+        .eq("user_id", uid)
         .gte("dia", addDays(isoDay(), -30))
         .not("food_id", "is", null)
         .order("criado_em", { ascending: false })

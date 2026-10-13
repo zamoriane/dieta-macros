@@ -58,9 +58,9 @@ export default function ResumoPage() {
       const src = p.fonte_atividade ?? "oura";
       const histFrom = addDays(from < addDays(today, -120) ? from : addDays(today, -120), -30);
       const [{ data: totals }, oura, { data: wdata }, avgActive] = await Promise.all([
-        sb.from("daily_totals").select("*").gte("dia", histFrom).lte("dia", to < today ? to : today),
+        sb.from("daily_totals").select("*").eq("user_id", p.id).gte("dia", histFrom).lte("dia", to < today ? to : today),
         getActivityDays(sb, from, to, src),
-        sb.from("weights").select("dia,kg").gte("dia", histFrom).lte("dia", today).order("dia"),
+        sb.from("weights").select("dia,kg").eq("user_id", p.id).gte("dia", histFrom).lte("dia", today).order("dia"),
         avgOuraActive(sb, today, 14, src),
       ]);
       const tByDay = new Map((totals ?? []).map((t) => [t.dia as string, t]));

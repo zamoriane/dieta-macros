@@ -5,6 +5,7 @@ import { ageOn, bmrMifflin } from "@/lib/nutrition";
 import { getProfile, getUserId, isoDay, type Profile } from "@/lib/data";
 import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
+import { TrainerLinks } from "@/components/perfil/TrainerLinks";
 
 const OURA_MSG: Record<string, string> = {
   ok: "Oura ligado e últimos 30 dias sincronizados.",
@@ -26,14 +27,15 @@ export default function PerfilPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setP(await getProfile(sb));
-    const { data } = await sb.from("weights").select("dia,kg").order("dia", { ascending: false }).limit(14);
+    const prof = await getProfile(sb);
+    setP(prof);
+    const { data } = await sb.from("weights").select("dia,kg").eq("user_id", prof.id).order("dia", { ascending: false }).limit(14);
     setWeights((data ?? []).map((w) => ({ dia: w.dia, kg: Number(w.kg) })));
-    const { count } = await sb.from("oura_daily").select("dia", { count: "exact", head: true });
+    const { count } = await sb.from("oura_daily").select("dia", { count: "exact", head: true }).eq("user_id", prof.id);
     setOuraLinked((count ?? 0) > 0);
     const { data: u } = await sb.auth.getUser();
     setEmail(u.user?.email ?? "");
-    const { data: log } = await sb.from("health_ingest_log").select("recebido_em,resumo,bytes").order("recebido_em", { ascending: false }).limit(1);
+    const { data: log } = await sb.from("health_ingest_log").select("recebido_em,resumo,bytes").eq("user_id", prof.id).order("recebido_em", { ascending: false }).limit(1);
     setLastIngest(log?.[0] ?? null);
   }, [sb]);
 
@@ -217,7 +219,19 @@ export default function PerfilPage() {
         </p>
       </section>
 
+      <TrainerLinks />
+
       <TrainerSection p={p} email={email} onChange={load} sb={sb} />
+
+      {p.pt_estado === "aprovado" && (
+        <a href="/clientes" className="card flex items-center gap-3 p-4 text-sm font-medium hover:bg-card-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent">
+            <Icon name="users" size={18} />
+          </span>
+          Os meus clientes
+          <Icon name="chevronRight" size={16} className="ml-auto text-muted" />
+        </a>
+      )}
 
       {p.role === "admin" && (
         <a href="/admin" className="card flex items-center gap-3 p-4 text-sm font-medium hover:bg-card-2">

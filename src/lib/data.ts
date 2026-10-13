@@ -91,31 +91,51 @@ export async function getUserId(sb: SupabaseClient): Promise<string> {
   return data.user.id;
 }
 
+/**
+ * Id do utilizador com sessão, lido da sessão local (sem pedido à rede).
+ * IMPORTANTE: com treinadores e admin, o RLS pode devolver dados de várias pessoas;
+ * todas as leituras filtram explicitamente pelo dono (o próprio, ou o cliente que o treinador está a ver).
+ */
+export async function me(sb: SupabaseClient): Promise<string> {
+  const { data } = await sb.auth.getSession();
+  if (data.session?.user.id) return data.session.user.id;
+  return getUserId(sb);
+}
+
 export async function getProfile(sb: SupabaseClient): Promise<Profile> {
-  const { data, error } = await sb.from("profiles").select("*").single();
+  const uid = await me(sb);
+  const { data, error } = await sb.from("profiles").select("*").eq("id", uid).single();
   if (error) throw error;
   return data as Profile;
 }
 
+/** Perfil de um cliente, para o treinador (via função segura, sem campos sensíveis). */
+export async function getClientProfile(sb: SupabaseClient, clientId: string): Promise<Profile | null> {
+  const { data } = await sb.rpc("client_profile", { p_client: clientId });
+  return (data as Profile | null) ?? null;
+}
+
 /** Peso mais recente até à data indicada. */
-export async function latestWeight(sb: SupabaseClient, until: string): Promise<{ dia: string; kg: number } | null> {
-  const { data } = await sb.from("weights").select("dia,kg").lte("dia", until).order("dia", { ascending: false }).limit(1);
+export async function latestWeight(sb: SupabaseClient, until: string, owner?: string): Promise<{ dia: string; kg: number } | null> {
+  const uid = owner ?? (await me(sb));
+  const { data } = await sb.from("weights").select("dia,kg").eq("user_id", uid).lte("dia", until).order("dia", { ascending: false }).limit(1);
   return data?.[0] ? { dia: data[0].dia, kg: Number(data[0].kg) } : null;
 }
 
-export async function getPlan(sb: SupabaseClient): Promise<{ meals: PlanMeal[]; items: PlanItem[] }> {
+export async function getPlan(sb: SupabaseClient, owner?: string): Promise<{ meals: PlanMeal[]; items: PlanItem[] }> {
+  const uid = owner ?? (await me(sb));
   const [{ data: meals }, { data: items }] = await Promise.all([
-    sb.from("plan_meals").select("*").order("posicao"),
-    sb.from("plan_items").select("*, foods(*)").order("posicao"),
+    sb.from("plan_meals").select("*").eq("user_id", uid).order("posicao"),
+    sb.from("plan_items").select("*, foods(*)").eq("user_id", uid).order("posicao"),
   ]);
   return { meals: (meals ?? []) as PlanMeal[], items: (items ?? []) as unknown as PlanItem[] };
 }
 
 /** Garante que o dia existe; na criação copia o plano base. Devolve true se acabou de criar. */
 export async function ensureDay(sb: SupabaseClient, dia: string, copyPlan = true): Promise<boolean> {
-  const { data: existing } = await sb.from("days").select("dia").eq("dia", dia).maybeSingle();
+  const userId = await me(sb);
+  const { data: existing } = await sb.from("days").select("dia").eq("user_id", userId).eq("dia", dia).maybeSingle();
   if (existing) return false;
-  const userId = await getUserId(sb);
   const { error } = await sb.from("days").insert({ user_id: userId, dia });
   if (error) {
     if (error.code === "23505") return false; // criado noutro separador
@@ -128,8 +148,8 @@ export async function ensureDay(sb: SupabaseClient, dia: string, copyPlan = true
 
 /** Copia os itens do plano base para o dia (usado na criação do dia ou num dia que ficou vazio). */
 export async function applyPlanToDay(sb: SupabaseClient, dia: string): Promise<number> {
-  const userId = await getUserId(sb);
-  const { meals, items } = await getPlan(sb);
+  const userId = await me(sb);
+  const { meals, items } = await getPlan(sb, userId);
   const rows = items.map((it) => {
     const meal = meals.find((m) => m.id === it.plan_meal_id)!;
     const m = scale(it.foods, Number(it.gramas));
@@ -152,14 +172,15 @@ export async function applyPlanToDay(sb: SupabaseClient, dia: string): Promise<n
   return rows.length;
 }
 
-export async function getDayItems(sb: SupabaseClient, dia: string): Promise<LogItem[]> {
-  const { data, error } = await sb.from("log_items").select("*").eq("dia", dia).order("refeicao_pos").order("id");
+export async function getDayItems(sb: SupabaseClient, dia: string, owner?: string): Promise<LogItem[]> {
+  const uid = owner ?? (await me(sb));
+  const { data, error } = await sb.from("log_items").select("*").eq("user_id", uid).eq("dia", dia).order("refeicao_pos").order("id");
   if (error) throw error;
   return (data ?? []) as LogItem[];
 }
 
 export async function addLogItem(sb: SupabaseClient, dia: string, refeicao: string, pos: number, food: Food, gramas: number) {
-  const userId = await getUserId(sb);
+  const userId = await me(sb);
   await ensureDay(sb, dia, false);
   const { error } = await sb.from("log_items").insert({
     user_id: userId,
@@ -189,8 +210,9 @@ export async function updateLogGrams(sb: SupabaseClient, item: LogItem, gramas: 
   if (error) throw error;
 }
 
-export async function getOuraDays(sb: SupabaseClient, from: string, to: string): Promise<OuraDay[]> {
-  const { data } = await sb.from("oura_daily").select("*").gte("dia", from).lte("dia", to).order("dia");
+export async function getOuraDays(sb: SupabaseClient, from: string, to: string, owner?: string): Promise<OuraDay[]> {
+  const uid = owner ?? (await me(sb));
+  const { data } = await sb.from("oura_daily").select("*").eq("user_id", uid).gte("dia", from).lte("dia", to).order("dia");
   return (data ?? []) as OuraDay[];
 }
 
@@ -204,8 +226,9 @@ export type HealthDayRow = {
   workouts: Workout[];
 };
 
-export async function getHealthDays(sb: SupabaseClient, from: string, to: string): Promise<HealthDayRow[]> {
-  const { data } = await sb.from("health_daily").select("*").gte("dia", from).lte("dia", to).order("dia");
+export async function getHealthDays(sb: SupabaseClient, from: string, to: string, owner?: string): Promise<HealthDayRow[]> {
+  const uid = owner ?? (await me(sb));
+  const { data } = await sb.from("health_daily").select("*").eq("user_id", uid).gte("dia", from).lte("dia", to).order("dia");
   return (data ?? []) as HealthDayRow[];
 }
 
@@ -213,10 +236,10 @@ export async function getHealthDays(sb: SupabaseClient, from: string, to: string
  * Dias de atividade na forma usada pelos cálculos. Sono, prontidão e stress vêm sempre do Oura;
  * calorias ativas e passos vêm da fonte escolhida no perfil (Oura ou Apple Watch).
  */
-export async function getActivityDays(sb: SupabaseClient, from: string, to: string, source: "oura" | "apple"): Promise<OuraDay[]> {
-  const oura = await getOuraDays(sb, from, to);
+export async function getActivityDays(sb: SupabaseClient, from: string, to: string, source: "oura" | "apple", owner?: string): Promise<OuraDay[]> {
+  const oura = await getOuraDays(sb, from, to, owner);
   if (source !== "apple") return oura;
-  const health = await getHealthDays(sb, from, to);
+  const health = await getHealthDays(sb, from, to, owner);
   const byDay = new Map<string, OuraDay>(oura.map((o) => [o.dia, { ...o }]));
   for (const h of health) {
     const base: OuraDay = byDay.get(h.dia) ?? {
@@ -241,11 +264,19 @@ export function profileComplete(p: Profile): boolean {
 }
 
 /** Média das calorias ativas do Oura nos dias completos anteriores (null se houver menos de 3 dias). */
-export async function avgOuraActive(sb: SupabaseClient, before: string, days = 14, source: "oura" | "apple" = "oura"): Promise<number | null> {
+export async function avgOuraActive(
+  sb: SupabaseClient,
+  before: string,
+  days = 14,
+  source: "oura" | "apple" = "oura",
+  owner?: string,
+): Promise<number | null> {
+  const uid = owner ?? (await me(sb));
   const [table, col] = source === "apple" ? ["health_daily", "active_kcal"] : ["oura_daily", "active_calories"];
   const { data } = await sb
     .from(table)
     .select(col)
+    .eq("user_id", uid)
     .gte("dia", addDays(before, -days))
     .lt("dia", before)
     .not(col, "is", null);

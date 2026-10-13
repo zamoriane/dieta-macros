@@ -56,7 +56,13 @@ App web responsivo (PC, tablet, telemóvel) para organizar a dieta por macronutr
 2. A área **Admin** (barra superior no desktop; no telemóvel em Perfil → Administração) lista utilizadores, permite ativar/desativar contas e aprovar pedidos de **Perfil Treinador (PT)**, que geram um código único.
 3. Qualquer utilizador pode pedir o Perfil Treinador em **Perfil → Perfil Treinador (PT)**.
 
-### 6. Primeiro uso
+### 6. Treinadores e clientes
+1. No Supabase, rode `supabase/migrations/0004_trainer_links.sql`.
+2. O cliente vai a **Perfil → O meu treinador**, introduz o código `PT-XXXXX` e escolhe as permissões (plano alimentar, progresso).
+3. O treinador aceita em **Clientes** e passa a editar o plano do cliente e ver o progresso (conforme as permissões).
+4. Todas as alterações ao plano ficam no **Histórico de alterações**, com o autor.
+
+### 7. Primeiro uso
 1. Crie a conta no ecrã de login e confirme o email.
 2. **Perfil**: sexo, data de nascimento, altura, peso de hoje, metas.
 3. **Plano**: crie as refeições padrão e adicione os alimentos.
