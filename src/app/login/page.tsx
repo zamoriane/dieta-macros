@@ -43,7 +43,7 @@ export default function LoginPage() {
           required
           autoComplete={mode === "entrar" ? "current-password" : "new-password"}
         />
-        <button disabled={busy} className="w-full rounded-xl bg-accent py-2.5 font-medium text-white disabled:opacity-60">
+        <button disabled={busy} className="w-full rounded-xl bg-accent py-2.5 font-medium text-on-accent disabled:opacity-60">
           {busy ? "Aguarde…" : mode === "entrar" ? "Entrar" : "Criar conta"}
         </button>
         {msg && <p className="text-sm text-muted">{msg}</p>}

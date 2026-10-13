@@ -10,26 +10,49 @@ import {
   avgOuraActive,
   computeDay,
   ensureDay,
-  getDayItems,
   getActivityDays,
+  getDayItems,
   getHealthDays,
-  type HealthDayRow,
   getPlan,
   getProfile,
+  getUserId,
   isoDay,
   latestWeight,
-  profileComplete,
   sum,
   updateLogGrams,
+  type HealthDayRow,
   type LogItem,
   type OuraDay,
   type Profile,
 } from "@/lib/data";
-import { FoodPicker } from "@/components/FoodPicker";
-import { DaySummary } from "@/components/Summary";
+import { FoodPicker, GramsInput, MacroPreview } from "@/components/FoodPicker";
+import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
+import { DateNavigator, EmptyState, FormField, Skeleton } from "@/components/ui/Primitives";
+import { Icon } from "@/components/ui/Icon";
+import { toast } from "@/components/ui/Toast";
+import { CalorieCard } from "@/components/hoje/CalorieCard";
+import { MacroCard } from "@/components/hoje/MacroCard";
+import { ActivityCard } from "@/components/hoje/ActivityCard";
+import { MealCard } from "@/components/hoje/MealCard";
+import { AlertsBar } from "@/components/hoje/AlertsBar";
 
-const fmtDay = (iso: string) =>
-  new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" });
+const fmtLong = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" });
+const fmtShort = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
+
+function greeting(name?: string | null) {
+  const h = new Date().getHours();
+  const g = h < 12 ? "Bom dia" : h < 19 ? "Boa tarde" : "Boa noite";
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `${g}, ${first}` : g;
+}
+
+/** Cópia de um item sem os campos gerados pelo banco. */
+function strip(it: LogItem) {
+  const rest: Record<string, unknown> = { ...it };
+  delete rest.id;
+  delete rest.criado_em;
+  return rest;
+}
 
 export default function HojePage() {
   const sb = useMemo(() => createClient(), []);
@@ -37,17 +60,23 @@ export default function HojePage() {
   const [dia, setDia] = useState(today);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [items, setItems] = useState<LogItem[]>([]);
+  const [yItems, setYItems] = useState<LogItem[]>([]);
   const [dayExists, setDayExists] = useState(true);
   const [weight, setWeight] = useState<{ dia: string; kg: number } | null>(null);
   const [oura, setOura] = useState<OuraDay | null>(null);
+  const [health, setHealth] = useState<HealthDayRow | null>(null);
   const [lowStreak, setLowStreak] = useState(0);
   const [planMeals, setPlanMeals] = useState<{ nome: string; posicao: number }[]>([]);
   const [planItemCount, setPlanItemCount] = useState(0);
   const [avgActive, setAvgActive] = useState<number | null>(null);
-  const [health, setHealth] = useState<HealthDayRow | null>(null);
-  const [picker, setPicker] = useState<{ meal: string; pos: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [picker, setPicker] = useState<{ meal: string; pos: number } | null>(null);
+  const [editing, setEditing] = useState<LogItem | null>(null);
+  const [editGrams, setEditGrams] = useState("");
+  const [newMealOpen, setNewMealOpen] = useState(false);
+  const [newMealName, setNewMealName] = useState("");
 
   const load = useCallback(async () => {
     setError(null);
@@ -58,8 +87,9 @@ export default function HojePage() {
       const { data: d } = await sb.from("days").select("dia").eq("dia", dia).maybeSingle();
       setDayExists(!!d);
       const src = p.fonte_atividade ?? "oura";
-      const [its, w, od, plan, prev, avg, hd] = await Promise.all([
+      const [its, yits, w, od, plan, prev, avg, hd] = await Promise.all([
         getDayItems(sb, dia),
+        getDayItems(sb, addDays(dia, -1)),
         latestWeight(sb, dia),
         getActivityDays(sb, dia, dia, src),
         getPlan(sb),
@@ -67,12 +97,13 @@ export default function HojePage() {
         avgOuraActive(sb, dia, 14, src),
         getHealthDays(sb, dia, dia),
       ]);
+      setItems(its);
+      setYItems(yits);
+      setWeight(w);
+      setOura(od[0] ?? null);
       setHealth(hd[0] ?? null);
       setAvgActive(avg);
       setPlanItemCount(plan.items.length);
-      setItems(its);
-      setWeight(w);
-      setOura(od[0] ?? null);
       setPlanMeals(plan.meals.map((m) => ({ nome: m.nome, posicao: m.posicao })));
       let streak = 0;
       for (const r of prev.data ?? []) {
@@ -109,8 +140,10 @@ export default function HojePage() {
       .catch(() => {});
   }, [load]);
 
+  const isToday = dia === today;
+  const source = profile?.fonte_atividade ?? "oura";
   const totals = sum(items);
-  const calc = profile ? computeDay(profile, weight?.kg ?? null, totals, oura, dia, { isToday: dia === today, avgActive }) : null;
+  const calc = profile ? computeDay(profile, weight?.kg ?? null, totals, oura, dia, { isToday, avgActive }) : null;
 
   const alerts: Alert[] = calc
     ? buildAlerts({
@@ -118,7 +151,7 @@ export default function HojePage() {
         targets: calc.targets,
         balance: calc.balance,
         hour: new Date().getHours(),
-        isToday: dia === today,
+        isToday,
         lowIntakeStreak: lowStreak,
         minKcal: profile!.kcal_minimo,
         hasWeightLast7d: !!weight && weight.dia >= addDays(today, -7),
@@ -126,7 +159,7 @@ export default function HojePage() {
       })
     : [];
 
-  // Refeições: as do dia + as do plano que ainda não têm itens
+  // Refeições: as do plano (mesmo vazias) + as que só existem no dia
   const meals = new Map<string, { pos: number; items: LogItem[] }>();
   for (const pm of planMeals) meals.set(pm.nome, { pos: pm.posicao, items: [] });
   for (const it of items) {
@@ -135,187 +168,183 @@ export default function HojePage() {
   }
   const mealList = [...meals.entries()].sort((a, b) => a[1].pos - b[1].pos);
 
-  async function remove(id: number) {
-    await sb.from("log_items").delete().eq("id", id);
-    load();
+  // ---------- ações ----------
+  async function remove(it: LogItem) {
+    const { error: e } = await sb.from("log_items").delete().eq("id", it.id);
+    if (e) return toast("Não foi possível remover", { kind: "erro" });
+    await load();
+    toast(`${it.food_name} removido`, {
+      action: {
+        label: "Desfazer",
+        run: async () => {
+          const userId = await getUserId(sb);
+          await sb.from("log_items").insert({ ...strip(it), user_id: userId });
+          load();
+        },
+      },
+    });
   }
 
-  async function editGrams(item: LogItem) {
-    const v = prompt(`Quantidade de ${item.food_name} (g)`, String(item.gramas));
-    const g = Number((v ?? "").replace(",", "."));
-    if (!v || !(g > 0)) return;
-    await updateLogGrams(sb, item, g);
-    load();
+  function openEdit(it: LogItem) {
+    setEditing(it);
+    setEditGrams(String(Number(it.gramas)));
   }
 
-  async function newMeal() {
-    const nome = prompt("Nome da refeição (ex.: Lanche da tarde)");
-    if (!nome?.trim()) return;
-    const pos = Math.max(0, ...mealList.map(([, m]) => m.pos)) + 1;
-    setPicker({ meal: nome.trim(), pos });
+  async function saveEdit() {
+    if (!editing) return;
+    const g = Number(editGrams.replace(",", "."));
+    if (!(g > 0)) return;
+    try {
+      await updateLogGrams(sb, editing, g);
+      setEditing(null);
+      await load();
+      toast("Quantidade atualizada");
+    } catch {
+      toast("Não foi possível guardar", { kind: "erro" });
+    }
   }
 
-  async function createFromPlan() {
-    await ensureDay(sb, dia, true);
-    load();
+  async function repeatYesterday(meal: string, pos: number) {
+    const src = yItems.filter((y) => y.refeicao === meal);
+    if (!src.length) return;
+    await ensureDay(sb, dia, false);
+    const userId = await getUserId(sb);
+    const { error: e } = await sb.from("log_items").insert(src.map((y) => ({ ...strip(y), user_id: userId, dia, refeicao_pos: pos })));
+    if (e) return toast("Não foi possível copiar", { kind: "erro" });
+    await load();
+    toast(`${meal} copiado de ontem`);
   }
 
   async function fillFromPlan() {
-    await applyPlanToDay(sb, dia);
-    load();
+    await ensureDay(sb, dia, false);
+    const n = await applyPlanToDay(sb, dia);
+    await load();
+    toast(`Plano aplicado (${n} alimentos)`);
   }
 
+  function createMeal() {
+    const nome = newMealName.trim();
+    if (!nome) return;
+    const pos = Math.max(0, ...mealList.map(([, m]) => m.pos)) + 1;
+    setNewMealOpen(false);
+    setNewMealName("");
+    setPicker({ meal: nome, pos });
+  }
+
+  // ---------- render ----------
+  const eg = Number(editGrams.replace(",", "."));
+  const editPreview =
+    editing && eg > 0
+      ? {
+          kcal: (editing.kcal * eg) / Number(editing.gramas),
+          protein: Math.round(((editing.protein * eg) / Number(editing.gramas)) * 10) / 10,
+          carbs: Math.round(((editing.carbs * eg) / Number(editing.gramas)) * 10) / 10,
+          fat: Math.round(((editing.fat * eg) / Number(editing.gramas)) * 10) / 10,
+        }
+      : null;
+
   return (
-    <div className="space-y-4">
-      <header className="flex items-center justify-between">
-        <button className="rounded-full px-3 py-1 text-lg text-muted" onClick={() => setDia(addDays(dia, -1))} aria-label="Dia anterior">
-          ‹
-        </button>
-        <div className="text-center">
-          <h1 className="text-lg font-semibold capitalize">{dia === today ? "Hoje" : fmtDay(dia)}</h1>
-          {dia !== today && (
-            <button className="text-xs text-accent" onClick={() => setDia(today)}>
-              voltar para hoje
-            </button>
-          )}
-          {dia === today && <p className="text-xs capitalize text-muted">{fmtDay(dia)}</p>}
+    <div className="space-y-5">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight">{isToday ? greeting(profile?.nome) : "Registo do dia"}</h1>
+          <p className="text-sm capitalize text-muted">{fmtLong(dia)}</p>
         </div>
-        <button
-          className="rounded-full px-3 py-1 text-lg text-muted disabled:opacity-30"
-          disabled={dia >= today}
-          onClick={() => setDia(addDays(dia, 1))}
-          aria-label="Dia seguinte"
-        >
-          ›
-        </button>
+        <div className="card px-1 py-1">
+          <DateNavigator
+            label={isToday ? "Hoje" : fmtShort(dia)}
+            onPrev={() => setDia(addDays(dia, -1))}
+            onNext={() => setDia(addDays(dia, 1))}
+            nextDisabled={dia >= today}
+            onToday={() => setDia(today)}
+            isToday={isToday}
+          />
+        </div>
       </header>
 
-      {error && <p className="rounded-xl bg-bad/10 p-3 text-sm text-bad">{error}</p>}
-
-      {profile && (!profileComplete(profile) || !weight) && (
-        <Link href="/perfil" className="block rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">
-          Complete o perfil (sexo, nascimento, altura) e registe o peso para ver metas, gasto e défice. →
-        </Link>
-      )}
-
-      {alerts.length > 0 && (
-        <ul className="space-y-2">
-          {alerts.map((a, i) => (
-            <li
-              key={i}
-              className={`rounded-xl border p-3 text-sm ${
-                a.level === "alerta" ? "border-bad/40 bg-bad/10" : a.level === "aviso" ? "border-warn/40 bg-warn/10" : "border-line bg-card"
-              }`}
-            >
-              {a.text}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {!loading && dayExists && items.length === 0 && planItemCount > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">
-          <span>Este dia está vazio.</span>
-          <button className="shrink-0 rounded-lg bg-accent px-3 py-1.5 font-medium text-white" onClick={fillFromPlan}>
-            Aplicar plano base
+      {error && (
+        <div className="flex items-center gap-3 rounded-xl border border-bad/30 bg-bad-soft px-4 py-3 text-sm">
+          <Icon name="alert" size={18} className="text-bad" />
+          <span className="flex-1">{error}</span>
+          <button className="font-semibold text-accent" onClick={load}>
+            Tentar de novo
           </button>
         </div>
       )}
 
-      <DaySummary totals={totals} targets={calc?.targets} balance={calc?.balance} projected={calc?.projected}
-        liveActivity={calc?.liveActivity}
-        sourceName={profile?.fonte_atividade === "apple" ? "Apple Watch" : "Oura"}
-      />
+      <AlertsBar alerts={alerts} />
 
-      {oura && (
-        <section className="tabular grid grid-cols-4 gap-2 text-center text-sm">
-          <Mini label="Sono" value={oura.sleep_score} />
-          <Mini label="Prontidão" value={oura.readiness_score} />
-          <Mini label="Passos" value={oura.steps} />
-          <Mini label="Stress alto" value={oura.stress_high_min != null ? `${oura.stress_high_min}m` : null} />
-        </section>
+      {!loading && items.length === 0 && planItemCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm">
+          <span className="font-medium">{dayExists ? "Este dia está vazio." : "Sem registo neste dia."}</span>
+          <button className="btn btn-primary !min-h-10" onClick={fillFromPlan}>
+            <Icon name="plan" size={18} /> Aplicar plano base
+          </button>
+        </div>
       )}
 
-      {health && (health.workouts?.length > 0 || health.exercise_min != null) && (
-        <section className="rounded-2xl border border-line bg-card px-4 py-3 text-sm">
-          <div className="flex justify-between text-xs text-muted">
-            <span>Apple Watch</span>
-            <span className="tabular">
-              {health.active_kcal != null && `${health.active_kcal} kcal ativas`}
-              {health.exercise_min != null && ` · ${health.exercise_min} min exercício`}
-            </span>
+      {loading && !profile ? (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="space-y-5">
+            <Skeleton className="h-56" />
+            <Skeleton className="h-44" />
           </div>
-          {health.workouts?.map((w, i) => (
-            <div key={i} className="tabular mt-1 flex justify-between">
-              <span>{w.name}</span>
-              <span className="text-muted">
-                {w.min != null && `${w.min} min`}
-                {w.kcal != null && ` · ${w.kcal} kcal`}
-              </span>
-            </div>
-          ))}
-        </section>
-      )}
+          <div className="space-y-3">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16" />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="space-y-5 lg:sticky lg:top-24">
+            <CalorieCard
+              totals={totals}
+              targets={calc?.targets}
+              balance={calc?.balance}
+              projected={calc?.projected}
+              liveActivity={calc?.liveActivity}
+              source={source}
+              deficitTarget={profile?.deficit_alvo_kcal}
+              isToday={isToday}
+            />
+            <MacroCard totals={totals} targets={calc?.targets} sex={profile?.sexo} />
+            <ActivityCard oura={oura} health={health} source={source} />
+          </div>
 
-      {!loading && !dayExists && dia !== today && (
-        <div className="rounded-xl border border-line bg-card p-4 text-sm">
-          Sem registo neste dia.{" "}
-          <button className="text-accent" onClick={createFromPlan}>
-            Criar a partir do plano base
-          </button>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Refeições</h2>
+              <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => setNewMealOpen(true)}>
+                <Icon name="plus" size={18} /> Refeição
+              </button>
+            </div>
+
+            {mealList.length === 0 && !loading && (
+              <EmptyState icon="plan" title="Ainda não há refeições">
+                Monte o seu plano base em{" "}
+                <Link className="font-medium text-accent" href="/plano">
+                  Plano
+                </Link>
+                , ou adicione uma refeição aqui.
+              </EmptyState>
+            )}
+
+            {mealList.map(([nome, m]) => (
+              <MealCard
+                key={`${dia}-${nome}`}
+                name={nome}
+                items={m.items}
+                onAdd={() => setPicker({ meal: nome, pos: m.pos })}
+                onEdit={openEdit}
+                onRemove={remove}
+                onRepeat={() => repeatYesterday(nome, m.pos)}
+                repeatCount={yItems.filter((y) => y.refeicao === nome).length}
+              />
+            ))}
+          </div>
         </div>
       )}
-
-      {mealList.length === 0 && !loading && (
-        <div className="rounded-xl border border-line bg-card p-4 text-sm text-muted">
-          Ainda não há plano base. <Link href="/plano" className="text-accent">Montar o plano</Link> ou adicione uma refeição abaixo.
-        </div>
-      )}
-
-      {mealList.map(([nome, m]) => {
-        const t = sum(m.items);
-        return (
-          <section key={nome} className="rounded-2xl border border-line bg-card">
-            <div className="flex items-baseline justify-between border-b border-line px-4 py-2.5">
-              <h2 className="font-medium">{nome}</h2>
-              <span className="tabular text-xs text-muted">
-                {t.kcal} kcal · P {Math.round(t.protein)} · C {Math.round(t.carbs)} · G {Math.round(t.fat)}
-              </span>
-            </div>
-            <ul className="divide-y divide-line">
-              {m.items.map((it) => {
-                const diff = it.gramas_plano != null ? Number(it.gramas) - Number(it.gramas_plano) : null;
-                return (
-                  <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <button className="min-w-0 flex-1 text-left" onClick={() => editGrams(it)}>
-                      <div className="truncate text-sm">{it.food_name}</div>
-                      <div className="tabular text-xs text-muted">
-                        {Number(it.gramas)} g
-                        {diff ? <span className="text-warn"> ({diff > 0 ? "+" : ""}{diff} g vs plano)</span> : null}
-                        {it.gramas_plano == null && <span className="text-accent"> · extra</span>}
-                      </div>
-                    </button>
-                    <div className="tabular text-right text-sm">
-                      {Math.round(it.kcal)}
-                      <div className="text-xs text-muted">P {Math.round(it.protein)}</div>
-                    </div>
-                    <button className="px-1 text-muted hover:text-bad" onClick={() => remove(it.id)} aria-label="Remover">
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <button className="w-full px-4 py-2.5 text-left text-sm text-accent" onClick={() => setPicker({ meal: nome, pos: m.pos })}>
-              + Adicionar a {nome}
-            </button>
-          </section>
-        );
-      })}
-
-      <button className="w-full rounded-2xl border border-dashed border-line py-3 text-sm text-muted" onClick={newMeal}>
-        + Outra refeição
-      </button>
 
       {picker && (
         <FoodPicker
@@ -324,18 +353,64 @@ export default function HojePage() {
           onPick={async (food, grams) => {
             await addLogItem(sb, dia, picker.meal, picker.pos, food, grams);
             await load();
+            toast(`${food.name} adicionado a ${picker.meal}`);
           }}
         />
       )}
-    </div>
-  );
-}
 
-function Mini({ label, value }: { label: string; value: number | string | null }) {
-  return (
-    <div className="rounded-xl border border-line bg-card py-2">
-      <div className="font-semibold">{value ?? "–"}</div>
-      <div className="text-xs text-muted">{label}</div>
+      <ResponsiveDialog
+        open={!!editing}
+        title={editing?.food_name ?? ""}
+        onClose={() => setEditing(null)}
+        footer={
+          <>
+            <button className="btn btn-ghost flex-1" onClick={() => setEditing(null)}>
+              Cancelar
+            </button>
+            <button className="btn btn-primary flex-1" onClick={saveEdit}>
+              Guardar
+            </button>
+          </>
+        }
+      >
+        {editing && (
+          <div className="space-y-4">
+            <GramsInput value={editGrams} onChange={setEditGrams} />
+            {editing.gramas_plano != null && Number(editing.gramas_plano) !== eg && (
+              <button className="btn btn-ghost w-full !min-h-10 !text-xs" onClick={() => setEditGrams(String(Number(editing.gramas_plano)))}>
+                Repor quantidade do plano ({Number(editing.gramas_plano)} g)
+              </button>
+            )}
+            {editPreview && <MacroPreview m={editPreview} />}
+          </div>
+        )}
+      </ResponsiveDialog>
+
+      <ResponsiveDialog
+        open={newMealOpen}
+        title="Nova refeição"
+        onClose={() => setNewMealOpen(false)}
+        footer={
+          <>
+            <button className="btn btn-ghost flex-1" onClick={() => setNewMealOpen(false)}>
+              Cancelar
+            </button>
+            <button className="btn btn-primary flex-1" disabled={!newMealName.trim()} onClick={createMeal}>
+              Continuar
+            </button>
+          </>
+        }
+      >
+        <FormField label="Nome" hint="Ex.: Ceia, Pré-treino. Fica só neste dia; para todos os dias, crie-a no Plano.">
+          <input
+            data-autofocus
+            className="w-full"
+            value={newMealName}
+            onChange={(e) => setNewMealName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && createMeal()}
+          />
+        </FormField>
+      </ResponsiveDialog>
     </div>
   );
 }

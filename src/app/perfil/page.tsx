@@ -70,7 +70,7 @@ export default function PerfilPage() {
     p.sexo && p.data_nascimento && p.altura_cm && lastKg ? bmrMifflin(p.sexo, lastKg, Number(p.altura_cm), ageOn(p.data_nascimento)) : null;
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <h1 className="text-xl font-semibold">Perfil e metas</h1>
 
       <section className="rounded-2xl border border-line bg-card p-4">
@@ -78,7 +78,7 @@ export default function PerfilPage() {
         <p className="text-xs text-muted">Idealmente todos os dias, de manhã, em jejum. O app usa a tendência, não o valor isolado.</p>
         <div className="mt-3 flex gap-2">
           <input inputMode="decimal" className="tabular w-32" placeholder="kg" value={kg} onChange={(e) => setKg(e.target.value)} />
-          <button className="rounded-xl bg-accent px-4 text-white" onClick={addWeight}>
+          <button className="rounded-xl bg-accent px-4 text-on-accent" onClick={addWeight}>
             Registar hoje
           </button>
         </div>
@@ -163,7 +163,7 @@ export default function PerfilPage() {
         </div>
       </section>
 
-      <button className="w-full rounded-xl bg-accent py-3 font-medium text-white" onClick={save}>
+      <button className="w-full rounded-xl bg-accent py-3 font-medium text-on-accent" onClick={save}>
         {saved ? "Guardado ✓" : "Guardar perfil"}
       </button>
 

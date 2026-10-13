@@ -106,7 +106,7 @@ export default function ResumoPage() {
       : new Date(from + "T12:00:00").toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Resumo</h1>
         <div className="flex rounded-xl border border-line bg-card p-0.5 text-sm">
@@ -117,7 +117,7 @@ export default function ResumoPage() {
                 setPeriod(p);
                 setOffset(0);
               }}
-              className={`rounded-lg px-3 py-1 ${period === p ? "bg-accent text-white" : "text-muted"}`}
+              className={`rounded-lg px-3 py-1 ${period === p ? "bg-accent text-on-accent" : "text-muted"}`}
             >
               {p === "semana" ? "Semana" : "Mês"}
             </button>

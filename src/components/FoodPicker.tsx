@@ -1,8 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { scale } from "@/lib/nutrition";
-import { getUserId, type Food } from "@/lib/data";
+import { addDays, getUserId, isoDay, type Food } from "@/lib/data";
+import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
+import { Icon } from "@/components/ui/Icon";
+import { FormField } from "@/components/ui/Primitives";
 
 type Props = {
   title?: string;
@@ -10,24 +13,47 @@ type Props = {
   onClose: () => void;
 };
 
+/** Pesquisa e adição de alimentos: recentes, pesquisa (base local + Calorie API), alimento próprio. */
 export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Props) {
+  const sb = useMemo(() => createClient(), []);
   const [q, setQ] = useState("");
   const [foods, setFoods] = useState<Food[]>([]);
+  const [recent, setRecent] = useState<Food[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [selected, setSelected] = useState<Food | null>(null);
   const [grams, setGrams] = useState("100");
   const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Recentes: alimentos usados nos últimos 30 dias
+  useEffect(() => {
+    (async () => {
+      const { data } = await sb
+        .from("log_items")
+        .select("food_id")
+        .gte("dia", addDays(isoDay(), -30))
+        .not("food_id", "is", null)
+        .order("criado_em", { ascending: false })
+        .limit(200);
+      const ids = [...new Set((data ?? []).map((r) => r.food_id as number))].slice(0, 12);
+      if (!ids.length) return;
+      const { data: fs } = await sb.from("foods").select("*").in("id", ids);
+      const byId = new Map((fs ?? []).map((f) => [f.id as number, f as Food]));
+      setRecent(ids.map((id) => byId.get(id)).filter(Boolean) as Food[]);
+    })();
+  }, [sb]);
 
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (q.trim().length < 2) {
       setFoods([]);
+      setLoading(false);
       return;
     }
+    setLoading(true);
     timer.current = setTimeout(async () => {
-      setLoading(true);
       setErr(null);
       try {
         const res = await fetch(`/api/foods/search?q=${encodeURIComponent(q.trim())}`);
@@ -39,147 +65,211 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
       } finally {
         setLoading(false);
       }
-    }, 450);
+    }, 400);
   }, [q]);
 
   const g = Number(grams.replace(",", "."));
   const preview = selected && g > 0 ? scale(selected, g) : null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-center" onClick={onClose}>
-      <div
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col rounded-t-2xl bg-card shadow-xl md:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="font-semibold">{selected ? selected.name : creating ? "Novo alimento" : title}</h2>
-          <button onClick={onClose} className="text-muted" aria-label="Fechar">
-            ✕
-          </button>
-        </div>
+  function choose(f: Food) {
+    setSelected(f);
+    setGrams(String(f.portions?.[0]?.grams ?? 100));
+  }
 
-        {creating ? (
-          <CustomFoodForm
-            initialName={q}
-            onCancel={() => setCreating(false)}
-            onCreated={(f) => {
-              setCreating(false);
-              setSelected(f);
-              setGrams("100");
-            }}
-          />
-        ) : !selected ? (
-          <div className="flex min-h-0 flex-1 flex-col p-4">
-            <input
-              autoFocus
-              className="w-full"
-              placeholder="Buscar (ex.: aveia, ovo, frango)…"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-            <p className="mt-1 text-xs text-muted">A base é sobretudo em inglês: experimente “oats”, “egg”, “chicken breast”.</p>
-            <ul className="mt-3 min-h-0 flex-1 divide-y divide-line overflow-y-auto">
-              {loading && <li className="py-3 text-sm text-muted">Buscando…</li>}
-              {!loading &&
-                foods.map((f) => (
-                  <li key={f.id}>
-                    <button
-                      className="w-full py-2.5 text-left"
-                      onClick={() => {
-                        setSelected(f);
-                        setGrams(String(f.portions?.[0]?.grams ?? 100));
-                      }}
-                    >
-                      <div className="text-sm font-medium">
-                        {f.name}
-                        {f.brand && <span className="text-muted"> · {f.brand}</span>}
-                        {f.source === "custom" && <span className="ml-1 rounded bg-accent/15 px-1.5 text-xs text-accent">meu</span>}
-                      </div>
-                      <div className="tabular text-xs text-muted">
-                        100 g: {Math.round(f.kcal_100g)} kcal · P {f.protein_100g} · C {f.carbs_100g} · G {f.fat_100g}
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              {!loading && q.length >= 2 && foods.length === 0 && <li className="py-3 text-sm text-muted">Nada encontrado.</li>}
-            </ul>
-            {err && <p className="mt-2 text-xs text-warn">{err}</p>}
-            <button className="mt-3 text-sm text-accent" onClick={() => setCreating(true)}>
-              + Criar alimento próprio
+  async function confirm() {
+    if (!selected || !(g > 0)) return;
+    setSaving(true);
+    try {
+      await onPick(selected, g);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const dialogTitle = selected ? selected.name : creating ? "Novo alimento" : title;
+
+  if (creating) {
+    return (
+      <ResponsiveDialog open title={dialogTitle} onClose={onClose}>
+        <CustomFoodForm
+          sb={sb}
+          initialName={q}
+          onCancel={() => setCreating(false)}
+          onCreated={(f) => {
+            setCreating(false);
+            setSelected(f);
+            setGrams("100");
+          }}
+        />
+      </ResponsiveDialog>
+    );
+  }
+
+  if (selected) {
+    return (
+      <ResponsiveDialog
+        open
+        title={dialogTitle}
+        onClose={onClose}
+        footer={
+          <>
+            <button className="btn btn-ghost flex-1" onClick={() => setSelected(null)}>
+              Voltar
             </button>
-          </div>
-        ) : (
-          <div className="space-y-4 p-4">
-            <div>
-              <label className="text-sm text-muted">Quantidade (g)</label>
-              <input
-                autoFocus
-                inputMode="decimal"
-                className="tabular mt-1 w-full text-lg"
-                value={grams}
-                onChange={(e) => setGrams(e.target.value)}
-              />
-              {selected.portions?.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {selected.portions.slice(0, 6).map((p) => (
-                    <button
-                      key={p.label + p.grams}
-                      onClick={() => setGrams(String(p.grams))}
-                      className="rounded-full border border-line px-3 py-1 text-xs"
-                    >
-                      {p.label} ({p.grams} g)
-                    </button>
-                  ))}
-                </div>
-              )}
+            <button className="btn btn-primary flex-1" disabled={!(g > 0) || saving} onClick={confirm}>
+              {saving ? "A adicionar…" : "Adicionar"}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted">
+            {Math.round(Number(selected.kcal_100g))} kcal por 100 g{selected.brand ? ` · ${selected.brand}` : ""}
+          </p>
+          <GramsInput value={grams} onChange={setGrams} />
+          {selected.portions?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {selected.portions.slice(0, 6).map((p) => (
+                <button key={p.label + p.grams} onClick={() => setGrams(String(p.grams))} className="btn btn-ghost !min-h-9 !px-3 !text-xs !font-medium">
+                  {p.label} · {p.grams} g
+                </button>
+              ))}
             </div>
-            {preview && (
-              <div className="tabular grid grid-cols-4 gap-2 text-center text-sm">
-                <Stat label="kcal" value={Math.round(preview.kcal)} />
-                <Stat label="Prot." value={preview.protein} color="text-prot" />
-                <Stat label="Carb." value={preview.carbs} color="text-carb" />
-                <Stat label="Gord." value={preview.fat} color="text-fat" />
-              </div>
-            )}
-            <div className="flex gap-2">
-              <button className="flex-1 rounded-xl border border-line py-2.5" onClick={() => setSelected(null)}>
-                Voltar
-              </button>
-              <button
-                disabled={!(g > 0)}
-                className="flex-1 rounded-xl bg-accent py-2.5 font-medium text-white disabled:opacity-50"
-                onClick={async () => {
-                  await onPick(selected, g);
-                  onClose();
-                }}
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+          )}
+          {preview && <MacroPreview m={preview} />}
+        </div>
+      </ResponsiveDialog>
+    );
+  }
 
-function Stat({ label, value, color = "" }: { label: string; value: number; color?: string }) {
+  const list = q.trim().length >= 2 ? foods : recent;
   return (
-    <div className="rounded-xl bg-bg py-2">
-      <div className={`text-base font-semibold ${color}`}>{value}</div>
-      <div className="text-xs text-muted">{label}</div>
+    <ResponsiveDialog open title={dialogTitle} onClose={onClose} wide>
+      <div className="sticky top-0 z-10 -mx-1 bg-card px-1 pb-3">
+        <div className="relative">
+          <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            data-autofocus
+            className="w-full !pl-10"
+            placeholder="Pesquisar (ex.: oats, egg, chicken breast)"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            aria-label="Pesquisar alimento"
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-muted">A base é sobretudo em inglês. Os alimentos que usa ficam guardados e aparecem em “Recentes”.</p>
+      </div>
+
+      {q.trim().length < 2 && recent.length > 0 && (
+        <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+          <Icon name="clock" size={14} /> Recentes
+        </h3>
+      )}
+
+      {loading ? (
+        <ul className="space-y-2" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} className="skeleton h-14" />
+          ))}
+        </ul>
+      ) : (
+        <ul className="divide-y divide-line">
+          {list.map((f) => (
+            <li key={f.id}>
+              <button className="flex w-full items-center gap-3 rounded-lg py-3 text-left hover:bg-card-2" onClick={() => choose(f)}>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium">
+                    {f.name}
+                    {f.source === "custom" && <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-px text-[10px] font-semibold text-accent">MEU</span>}
+                  </div>
+                  <div className="tabular mt-0.5 text-xs text-muted">
+                    {f.brand ? `${f.brand} · ` : ""}P {f.protein_100g} · C {f.carbs_100g} · G {f.fat_100g} <span className="opacity-70">/100 g</span>
+                  </div>
+                </div>
+                <div className="tabular shrink-0 text-right text-sm font-semibold">
+                  {Math.round(Number(f.kcal_100g))}
+                  <div className="text-[11px] font-normal text-muted">kcal</div>
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!loading && q.trim().length >= 2 && foods.length === 0 && <p className="py-6 text-center text-sm text-muted">Nada encontrado para “{q}”.</p>}
+      {err && <p className="mt-2 text-xs text-warn">{err}</p>}
+
+      <button className="btn btn-ghost mt-4 w-full" onClick={() => setCreating(true)}>
+        <Icon name="plus" size={18} /> Criar alimento próprio
+      </button>
+    </ResponsiveDialog>
+  );
+}
+
+export function GramsInput({ value, onChange, step = 10 }: { value: string; onChange: (v: string) => void; step?: number }) {
+  const n = Number(value.replace(",", ".")) || 0;
+  const bump = (d: number) => onChange(String(Math.max(0, Math.round((n + d) * 10) / 10)));
+  return (
+    <div className="flex items-center gap-2">
+      <button className="icon-btn border border-line" onClick={() => bump(-step)} aria-label={`Menos ${step} g`}>
+        <Icon name="minus" />
+      </button>
+      <div className="relative flex-1">
+        <input
+          data-autofocus
+          inputMode="decimal"
+          className="tabular w-full text-center !text-2xl font-semibold"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label="Quantidade em gramas"
+        />
+        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted">g</span>
+      </div>
+      <button className="icon-btn border border-line" onClick={() => bump(step)} aria-label={`Mais ${step} g`}>
+        <Icon name="plus" />
+      </button>
     </div>
   );
 }
 
-function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: string; onCancel: () => void; onCreated: (f: Food) => void }) {
-  const sb = createClient();
+export function MacroPreview({ m }: { m: { kcal: number; protein: number; carbs: number; fat: number } }) {
+  const cells = [
+    { label: "kcal", v: Math.round(m.kcal), c: "text-ink" },
+    { label: "Proteína", v: m.protein, c: "text-prot-ink" },
+    { label: "Carb.", v: m.carbs, c: "text-carb-ink" },
+    { label: "Gordura", v: m.fat, c: "text-fat-ink" },
+  ];
+  return (
+    <div className="tabular grid grid-cols-4 gap-2 text-center">
+      {cells.map((x) => (
+        <div key={x.label} className="rounded-xl bg-card-2 py-2.5">
+          <div className={`text-base font-semibold ${x.c}`}>{x.v}</div>
+          <div className="text-[11px] text-muted">{x.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CustomFoodForm({
+  sb,
+  initialName,
+  onCancel,
+  onCreated,
+}: {
+  sb: ReturnType<typeof createClient>;
+  initialName: string;
+  onCancel: () => void;
+  onCreated: (f: Food) => void;
+}) {
   const [f, setF] = useState({ name: initialName, kcal: "", p: "", c: "", g: "", fib: "" });
   const [err, setErr] = useState<string | null>(null);
   const n = (s: string) => Number(s.replace(",", ".")) || 0;
 
   async function save() {
-    if (!f.name.trim() || !f.kcal) return setErr("Nome e kcal são obrigatórios.");
+    if (!f.name.trim()) return setErr("Indique o nome.");
+    if (!(n(f.kcal) > 0)) return setErr("Indique as kcal por 100 g.");
     const userId = await getUserId(sb);
     const { data, error } = await sb
       .from("foods")
@@ -200,19 +290,17 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
   }
 
   const field = (key: keyof typeof f, label: string) => (
-    <label className="text-sm">
-      <span className="text-muted">{label}</span>
-      <input inputMode="decimal" className="tabular mt-1 w-full" value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} />
-    </label>
+    <FormField label={label}>
+      <input inputMode="decimal" className="tabular w-full" value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} />
+    </FormField>
   );
 
   return (
-    <div className="space-y-3 p-4">
-      <label className="block text-sm">
-        <span className="text-muted">Nome</span>
-        <input className="mt-1 w-full" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      </label>
-      <p className="text-xs text-muted">Valores por 100 g (veja o rótulo da embalagem).</p>
+    <div className="space-y-4">
+      <FormField label="Nome">
+        <input data-autofocus className="w-full" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      </FormField>
+      <p className="text-xs text-muted">Valores por 100 g, tal como no rótulo da embalagem.</p>
       <div className="grid grid-cols-2 gap-3">
         {field("kcal", "kcal")}
         {field("p", "Proteína (g)")}
@@ -221,11 +309,11 @@ function CustomFoodForm({ initialName, onCancel, onCreated }: { initialName: str
         {field("fib", "Fibra (g)")}
       </div>
       {err && <p className="text-sm text-bad">{err}</p>}
-      <div className="flex gap-2">
-        <button className="flex-1 rounded-xl border border-line py-2.5" onClick={onCancel}>
+      <div className="flex gap-2 pt-1">
+        <button className="btn btn-ghost flex-1" onClick={onCancel}>
           Cancelar
         </button>
-        <button className="flex-1 rounded-xl bg-accent py-2.5 font-medium text-white" onClick={save}>
+        <button className="btn btn-primary flex-1" onClick={save}>
           Guardar
         </button>
       </div>

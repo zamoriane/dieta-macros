@@ -1,51 +1,111 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — Modern Wellness.
+ * Paleta base sugerida, corrigida para contraste WCAG AA:
+ * - textos e botões usam os tons "-ink" / --accent (≥ 4.5:1);
+ * - barras e anéis usam os tons de preenchimento (≥ 3:1 contra a superfície).
+ * Os componentes usam SEMPRE estes tokens, nunca cores fixas.
+ */
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
   --color-bg: var(--bg);
   --color-card: var(--card);
+  --color-card-2: var(--card-2);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-ring: var(--ring);
+
   --color-prot: var(--prot);
+  --color-prot-ink: var(--prot-ink);
   --color-carb: var(--carb);
+  --color-carb-ink: var(--carb-ink);
   --color-fat: var(--fat);
+  --color-fat-ink: var(--fat-ink);
+  --color-fiber: var(--fiber);
+  --color-fiber-ink: var(--fiber-ink);
+
   --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
   --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
   --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.04);
 }
 
 :root {
-  --bg: #f6f5f1;
+  --bg: #f5f7fa;
   --card: #ffffff;
-  --ink: #1d1d1b;
-  --muted: #6b6a64;
-  --line: #e6e3db;
-  --accent: #1f6f5c;
-  --prot: #3b6fd8;
-  --carb: #d08a1e;
-  --fat: #c4475e;
-  --good: #1f8a5b;
-  --warn: #b7791f;
-  --bad: #c0392b;
+  --card-2: #f1f5f9;
+  --ink: #101828;
+  --muted: #526071;
+  --line: #e2e8f0;
+
+  --accent: #0f766e; /* texto/botões: 5.5:1 sobre branco */
+  --accent-strong: #115e59;
+  --accent-soft: rgb(13 148 136 / 0.1);
+  --on-accent: #ffffff;
+  --ring: #0d9488; /* anéis e destaques gráficos */
+
+  --prot: #3b82f6;
+  --prot-ink: #1d4ed8;
+  --carb: #d97706;
+  --carb-ink: #b45309;
+  --fat: #db2777;
+  --fat-ink: #be185d;
+  --fiber: #8b5cf6;
+  --fiber-ink: #6d28d9;
+
+  --good: #15803d;
+  --good-soft: rgb(21 128 61 / 0.1);
+  --warn: #b45309;
+  --warn-soft: rgb(217 119 6 / 0.12);
+  --bad: #b91c1c;
+  --bad-soft: rgb(185 28 28 / 0.1);
+
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121412;
-    --card: #1b1e1b;
-    --ink: #eceae4;
-    --muted: #9b9a93;
-    --line: #2c302c;
-    --accent: #4fb89a;
-    --prot: #6f97ec;
-    --carb: #e3a447;
-    --fat: #e07185;
-    --good: #48b883;
-    --warn: #e0a645;
-    --bad: #e2675a;
+    --bg: #0b1220;
+    --card: #162033;
+    --card-2: #1d2a40;
+    --ink: #f8fafc;
+    --muted: #9aa8bc;
+    --line: #2b3a52;
+
+    --accent: #2dd4bf;
+    --accent-strong: #5eead4;
+    --accent-soft: rgb(45 212 191 / 0.14);
+    --on-accent: #042f2e;
+    --ring: #2dd4bf;
+
+    --prot: #60a5fa;
+    --prot-ink: #93c5fd;
+    --carb: #fbbf24;
+    --carb-ink: #fcd34d;
+    --fat: #f472b6;
+    --fat-ink: #f9a8d4;
+    --fiber: #a78bfa;
+    --fiber-ink: #c4b5fd;
+
+    --good: #4ade80;
+    --good-soft: rgb(74 222 128 / 0.12);
+    --warn: #fbbf24;
+    --warn-soft: rgb(251 191 36 / 0.14);
+    --bad: #f87171;
+    --bad-soft: rgb(248 113 113 / 0.14);
+
     color-scheme: dark;
   }
 }
@@ -54,6 +114,7 @@ html,
 body {
   background: var(--bg);
   color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
 }
 
 input,
@@ -61,19 +122,142 @@ select,
 textarea {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 0.6rem;
-  padding: 0.5rem 0.7rem;
+  border-radius: 0.75rem;
+  padding: 0.6rem 0.8rem;
   color: var(--ink);
   font-size: 16px; /* evita zoom no iPhone */
+  min-height: 44px;
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 0.8;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--ring);
   outline-offset: 1px;
+  border-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Cartão base */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+/* Botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background-color 150ms, border-color 150ms, transform 100ms;
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.btn-primary:hover {
+  background: var(--accent-strong);
+}
+.btn-ghost {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+}
+.btn-ghost:hover {
+  background: var(--card-2);
+}
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 0.75rem;
+  color: var(--muted);
+  transition: background-color 150ms, color 150ms;
+}
+.icon-btn:hover {
+  background: var(--card-2);
+  color: var(--ink);
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(90deg, var(--card-2) 25%, var(--line) 50%, var(--card-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 0.75rem;
+}
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* Entradas de diálogos e toasts */
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-sheet {
+  animation: sheet-up 180ms ease-out;
+}
+.anim-fade {
+  animation: fade-in 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

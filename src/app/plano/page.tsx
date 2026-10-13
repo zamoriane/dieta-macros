@@ -76,7 +76,7 @@ export default function PlanoPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <header>
         <h1 className="text-xl font-semibold">Plano base</h1>
         <p className="text-sm text-muted">

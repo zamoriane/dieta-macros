@@ -1,39 +1,86 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
-const LINKS = [
-  { href: "/", label: "Hoje", icon: "M4 12h16M12 4v16" },
-  { href: "/plano", label: "Plano", icon: "M5 5h14v14H5zM9 9h6M9 13h6" },
-  { href: "/resumo", label: "Resumo", icon: "M5 19V11M12 19V5M19 19v-6" },
-  { href: "/perfil", label: "Perfil", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c1.5-4 14.5-4 16 0" },
+const LINKS: { href: string; label: string; icon: IconName }[] = [
+  { href: "/", label: "Hoje", icon: "today" },
+  { href: "/plano", label: "Plano", icon: "plan" },
+  { href: "/resumo", label: "Resumo", icon: "chart" },
+  { href: "/perfil", label: "Perfil", icon: "user" },
 ];
+
+const HIDDEN = ["/login", "/privacidade", "/termos"];
+
+function Logo() {
+  return (
+    <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-on-accent">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+          <path d="M12 4a8 8 0 1 0 8 8" />
+          <path d="M12 8a4 4 0 1 0 4 4" opacity="0.7" />
+        </svg>
+      </span>
+      Dieta Macros
+    </Link>
+  );
+}
 
 export function Nav() {
   const path = usePathname();
-  if (["/login", "/privacidade", "/termos"].some((p) => path.startsWith(p))) return null;
+  if (HIDDEN.some((p) => path.startsWith(p))) return null;
+  const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
+
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur md:top-0 md:bottom-auto md:border-b md:border-t-0">
-      <div className="mx-auto flex max-w-3xl items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] md:justify-start md:gap-1 md:px-4">
-        <span className="mr-6 hidden font-semibold tracking-tight md:block">Dieta Macros</span>
-        {LINKS.map((l) => {
-          const active = l.href === "/" ? path === "/" : path.startsWith(l.href);
-          return (
-            <Link
-              key={l.href}
-              href={l.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 text-xs md:flex-row md:gap-2 md:rounded-lg md:text-sm ${
-                active ? "text-accent font-semibold" : "text-muted hover:text-ink"
-              }`}
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="md:h-4 md:w-4">
-                <path d={l.icon} />
-              </svg>
-              {l.label}
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+    <>
+      {/* Desktop / tablet largo: barra superior */}
+      <header className="sticky top-0 z-40 hidden border-b border-line bg-card/90 backdrop-blur md:block">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6" aria-label="Principal">
+          <Logo />
+          <ul className="flex items-center gap-1">
+            {LINKS.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  aria-current={isActive(l.href) ? "page" : undefined}
+                  className={`flex h-10 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors ${
+                    isActive(l.href) ? "bg-accent-soft text-accent" : "text-muted hover:bg-card-2 hover:text-ink"
+                  }`}
+                >
+                  <Icon name={l.icon} size={18} />
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+
+      {/* Telemóvel: barra inferior fixa */}
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        aria-label="Principal"
+      >
+        <ul className="mx-auto grid max-w-md grid-cols-4">
+          {LINKS.map((l) => {
+            const active = isActive(l.href);
+            return (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${active ? "text-accent" : "text-muted"}`}
+                >
+                  <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}>
+                    <Icon name={l.icon} size={20} strokeWidth={active ? 2.1 : 1.75} />
+                  </span>
+                  {l.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+    </>
   );
 }
