@@ -23,6 +23,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [dayId, setDayId] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [extra, setExtra] = useState<Record<number, number>>({});
   const [info, setInfo] = useState<WorkoutExercise | null>(null);
@@ -43,7 +44,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
   }, [sb, ownerId, today, weekday]);
 
   useEffect(() => {
-    load().catch((e) => toast(`Não foi possível carregar o treino: ${(e as Error).message}`, { kind: "erro" }));
+    load().catch((e) => setLoadError((e as Error).message));
   }, [load]);
 
   useEffect(() => {
@@ -104,6 +105,12 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
     load();
   }
 
+  if (loadError)
+    return (
+      <EmptyState icon="alert" title="Não foi possível carregar o treino">
+        {/relation|does not exist|schema cache/i.test(loadError) ? "A base de dados ainda não tem as tabelas de treino (falta correr o SQL 0005)." : loadError}
+      </EmptyState>
+    );
   if (!loaded) return <Skeleton className="h-64" />;
 
   if (!days.length) {

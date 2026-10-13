@@ -31,7 +31,7 @@ export default function TreinoPage() {
       role="tab"
       aria-selected={tab === t}
       onClick={() => setTab(t)}
-      className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === t ? "bg-accent text-on-accent" : "text-muted"}`}
+      className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === t ? "bg-accent text-on-accent" : "text-muted"}`}
     >
       {label}
     </button>
