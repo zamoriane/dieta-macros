@@ -11,7 +11,7 @@ const LINKS = [
 
 export function Nav() {
   const path = usePathname();
-  if (path.startsWith("/login")) return null;
+  if (["/login", "/privacidade", "/termos"].some((p) => path.startsWith(p))) return null;
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 backdrop-blur md:top-0 md:bottom-auto md:border-b md:border-t-0">
       <div className="mx-auto flex max-w-3xl items-center justify-around px-2 pb-[env(safe-area-inset-bottom)] md:justify-start md:gap-1 md:px-4">
