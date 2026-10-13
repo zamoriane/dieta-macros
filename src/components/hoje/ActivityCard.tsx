@@ -1,4 +1,8 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
+import type { Workout } from "@/lib/applehealth";
+import { WorkoutDialog } from "./WorkoutDialog";
 import type { HealthDayRow, OuraDay } from "@/lib/data";
 import { SectionCard, SourceBadge } from "@/components/ui/Primitives";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -8,6 +12,7 @@ type Tile = { icon: IconName; label: string; value: string; detail?: string; sou
 const fmtMin = (m: number) => `${Math.floor(m / 60)}h${String(Math.round(m % 60)).padStart(2, "0")}`;
 
 export function ActivityCard({ oura, health, source }: { oura: OuraDay | null; health: HealthDayRow | null; source: "oura" | "apple" }) {
+  const [open, setOpen] = useState<Workout | null>(null);
   const tiles: Tile[] = [];
 
   const active = source === "apple" ? health?.active_kcal : oura?.active_calories;
@@ -54,24 +59,34 @@ export function ActivityCard({ oura, health, source }: { oura: OuraDay | null; h
       </ul>
 
       {workouts.length > 0 && (
-        <ul className="mt-3 space-y-2 border-t border-line pt-3">
+        <ul className="mt-3 space-y-1 border-t border-line pt-2">
           {workouts.map((w, i) => (
-            <li key={i} className="flex items-center gap-3 text-sm">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-                <Icon name="dumbbell" size={18} />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium leading-snug">{w.name}</span>
-                <span className="tabular block text-xs text-muted">
-                  {w.min != null && `${w.min} min`}
-                  {w.kcal != null && ` · ${w.kcal} kcal`}
+            <li key={w.id ?? i}>
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-1 py-2 text-left text-sm hover:bg-card-2"
+                onClick={() => setOpen(w)}
+                aria-label={`Ver detalhe de ${w.name}`}
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                  <Icon name={w.route ? "steps" : "dumbbell"} size={18} />
                 </span>
-              </span>
-              <SourceBadge source="apple" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium leading-snug">{w.name}</span>
+                  <span className="tabular block text-xs text-muted">
+                    {[w.min != null && `${w.min} min`, w.km != null && `${w.km.toLocaleString("pt-PT")} km`, w.kcal != null && `${w.kcal} kcal`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                    {w.route ? " · mapa" : ""}
+                  </span>
+                </span>
+                <SourceBadge source="apple" />
+                <Icon name="chevronRight" size={16} className="shrink-0 text-muted" />
+              </button>
             </li>
           ))}
         </ul>
       )}
+      <WorkoutDialog workout={open} onClose={() => setOpen(null)} />
     </SectionCard>
   );
 }

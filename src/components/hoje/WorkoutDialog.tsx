@@ -1,0 +1,63 @@
+"use client";
+import type { Workout } from "@/lib/applehealth";
+import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
+import { WorkoutMap } from "@/components/WorkoutMap";
+import { SourceBadge } from "@/components/ui/Primitives";
+
+const fmtTime = (s?: string) => (s ? s.slice(11, 16) : "");
+const fmtDate = (s: string) =>
+  new Date(s.slice(0, 10) + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" });
+
+function pace(min: number | null, km?: number | null) {
+  if (!min || !km || km < 0.05) return null;
+  const p = min / km;
+  const m = Math.floor(p);
+  const s = Math.round((p - m) * 60);
+  return `${m}:${String(s).padStart(2, "0")} /km`;
+}
+
+export function WorkoutDialog({ workout, onClose }: { workout: Workout | null; onClose: () => void }) {
+  const w = workout;
+  const stats = w
+    ? [
+        { k: "Duração", v: w.min != null ? `${w.min} min` : "–" },
+        { k: "Distância", v: w.km != null ? `${w.km.toLocaleString("pt-PT")} km` : "–" },
+        { k: "Ritmo médio", v: pace(w.min, w.km) ?? "–" },
+        { k: "Calorias ativas", v: w.kcal != null ? `${w.kcal} kcal` : "–" },
+        { k: "FC média", v: w.avg_hr != null ? `${w.avg_hr} bpm` : "–" },
+        { k: "FC máxima", v: w.max_hr != null ? `${w.max_hr} bpm` : "–" },
+      ]
+    : [];
+
+  return (
+    <ResponsiveDialog open={!!w} title={w?.name ?? ""} onClose={onClose} wide>
+      {w && (
+        <div className="space-y-4">
+          <p className="flex items-center gap-2 text-sm text-muted">
+            <span className="first-letter:uppercase">{fmtDate(w.start)}</span>
+            <span>
+              · {fmtTime(w.start)}
+              {w.end ? `–${fmtTime(w.end)}` : ""}
+            </span>
+            <SourceBadge source="apple" />
+          </p>
+
+          {w.route && w.route.length > 1 ? (
+            <WorkoutMap route={w.route} className="h-72 sm:h-96" />
+          ) : (
+            <p className="rounded-xl bg-card-2 p-4 text-center text-sm text-muted">Este treino não tem percurso GPS.</p>
+          )}
+
+          <dl className="tabular grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {stats.map((s) => (
+              <div key={s.k} className="rounded-xl bg-card-2 p-3">
+                <dt className="text-xs text-muted">{s.k}</dt>
+                <dd className="mt-0.5 text-base font-semibold">{s.v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+    </ResponsiveDialog>
+  );
+}

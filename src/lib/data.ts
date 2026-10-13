@@ -1,6 +1,7 @@
 "use client";
 // Acesso a dados no navegador. Tudo passa por RLS: cada utilizador só vê o que é seu.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Workout } from "@/lib/applehealth";
 import { scale, sum, ageOn, bmrMifflin, energyBalance, dailyTargets, type Macros } from "@/lib/nutrition";
 
 export type Food = {
@@ -194,7 +195,7 @@ export type HealthDayRow = {
   exercise_min: number | null;
   sleep_min: number | null;
   resting_hr: number | null;
-  workouts: { name: string; start: string; min: number | null; kcal: number | null }[];
+  workouts: Workout[];
 };
 
 export async function getHealthDays(sb: SupabaseClient, from: string, to: string): Promise<HealthDayRow[]> {
