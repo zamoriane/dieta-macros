@@ -122,7 +122,7 @@ export default function PerfilPage() {
           <Field label="Défice diário alvo (kcal)" hint="500 ≈ 0,5 kg/semana">
             <input inputMode="numeric" className="w-full" value={p.deficit_alvo_kcal} onChange={(e) => set("deficit_alvo_kcal", Number(e.target.value) || 0)} />
           </Field>
-          <Field label="Peso meta (kg)">
+          <Field label="Peso meta (kg)" hint="o peso final desejado, não quanto perder">
             <input inputMode="decimal" className="w-full" value={p.peso_meta_kg ?? ""} onChange={(e) => set("peso_meta_kg", num(e.target.value))} />
           </Field>
           <Field label="Proteína (g por kg)" hint="1,6–2,2 em défice; usa o peso meta se definido">

@@ -233,7 +233,9 @@ export function computeDay(
     manualActivityFactor: Number(p.fator_atividade_manual),
   });
   // Proteína calculada pelo peso-meta quando definido (mais adequado com excesso de peso)
-  const proteinBase = p.peso_meta_kg ? Math.min(Number(p.peso_meta_kg), weightKg) : weightKg;
+  // (ignora valores implausíveis, ex.: "10" escrito como "perder 10 kg")
+  const meta = Number(p.peso_meta_kg);
+  const proteinBase = meta >= 40 && meta >= weightKg * 0.6 ? Math.min(meta, weightKg) : weightKg;
   const targets = dailyTargets({
     expenditure: balance.expenditure,
     deficit: p.deficit_alvo_kcal,
