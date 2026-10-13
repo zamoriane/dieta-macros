@@ -152,6 +152,7 @@ textarea:focus {
   font-variant-numeric: tabular-nums;
 }
 
+@layer components {
 /* Cartão base */
 .card {
   background: var(--card);
@@ -224,6 +225,7 @@ textarea:focus {
   to {
     background-position: -200% 0;
   }
+}
 }
 
 /* Entradas de diálogos e toasts */
