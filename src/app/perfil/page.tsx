@@ -20,7 +20,7 @@ export default function PerfilPage() {
   const [ouraLinked, setOuraLinked] = useState(false);
   const [ouraMsg, setOuraMsg] = useState<string | null>(null);
   const [email, setEmail] = useState("");
-  const [lastIngest, setLastIngest] = useState<{ recebido_em: string; resumo: { dias?: string[]; metricas?: string[]; treinos?: number } } | null>(null);
+  const [lastIngest, setLastIngest] = useState<{ recebido_em: string; resumo: { dias?: string[]; metricas?: string[]; treinos?: number; erro?: string } } | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -31,7 +31,7 @@ export default function PerfilPage() {
     setOuraLinked((count ?? 0) > 0);
     const { data: u } = await sb.auth.getUser();
     setEmail(u.user?.email ?? "");
-    const { data: log } = await sb.from("health_ingest_log").select("recebido_em,resumo").order("recebido_em", { ascending: false }).limit(1);
+    const { data: log } = await sb.from("health_ingest_log").select("recebido_em,resumo,bytes").order("recebido_em", { ascending: false }).limit(1);
     setLastIngest(log?.[0] ?? null);
   }, [sb]);
 
@@ -208,7 +208,9 @@ export default function PerfilPage() {
           {lastIngest
             ? `Último envio: ${new Date(lastIngest.recebido_em).toLocaleString("pt-PT")} · dias ${lastIngest.resumo.dias?.join(", ") || "–"} · métricas: ${
                 lastIngest.resumo.metricas?.join(", ") || "nenhuma"
-              }${lastIngest.resumo.treinos ? ` · ${lastIngest.resumo.treinos} treinos` : ""}`
+              }${lastIngest.resumo.treinos ? ` · ${lastIngest.resumo.treinos} treinos` : ""}${
+                lastIngest.resumo.erro ? ` · ERRO: ${lastIngest.resumo.erro}` : ""
+              } · ${Math.round(((lastIngest as { bytes?: number }).bytes ?? 0) / 1024)} KB`
             : "Ainda não chegou nenhum envio do iPhone."}
         </p>
       </section>
