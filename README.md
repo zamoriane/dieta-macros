@@ -62,7 +62,14 @@ App web responsivo (PC, tablet, telemóvel) para organizar a dieta por macronutr
 3. O treinador aceita em **Clientes** e passa a editar o plano do cliente e ver o progresso (conforme as permissões).
 4. Todas as alterações ao plano ficam no **Histórico de alterações**, com o autor.
 
-### 7. Primeiro uso
+### 7. Plano de treino (wger)
+1. No Supabase, rode `supabase/migrations/0005_workouts.sql`.
+2. Os exercícios vêm da base aberta [wger](https://wger.de) (sem chave). Na primeira pesquisa o servidor copia o catálogo (~930 exercícios) para a tabela `exercises`; é atualizado a cada 30 dias.
+3. **Treino → Plano de treino**: crie treinos (A, B…), dias da semana e exercícios com séries, repetições, carga e descanso. O treinador faz o mesmo em **Clientes → cliente → Treino** se o cliente lhe der a permissão de treino.
+4. **Treino → Treinar**: o cliente marca cada série (reps e kg), com cronómetro de descanso; "Última vez" mostra a sessão anterior.
+5. Licença CC BY-SA 3.0: a ficha de cada exercício mostra a autoria e a ligação para a wger.
+
+### 8. Primeiro uso
 1. Crie a conta no ecrã de login e confirme o email.
 2. **Perfil**: sexo, data de nascimento, altura, peso de hoje, metas.
 3. **Plano**: crie as refeições padrão e adicione os alimentos.

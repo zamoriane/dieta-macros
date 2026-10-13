@@ -8,6 +8,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 const LINKS: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Hoje", icon: "today" },
   { href: "/plano", label: "Plano", icon: "plan" },
+  { href: "/treino", label: "Treino", icon: "dumbbell" },
   { href: "/resumo", label: "Resumo", icon: "chart" },
   { href: "/perfil", label: "Perfil", icon: "user" },
 ];
@@ -48,7 +49,7 @@ export function Nav() {
   if (hidden) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
   const mobileLinks: { href: string; label: string; icon: IconName }[] = isTrainer
-    ? [...LINKS.slice(0, 3), { href: "/clientes", label: "Clientes", icon: "users" }, LINKS[3]]
+    ? [...LINKS.slice(0, 4), { href: "/clientes", label: "Clientes", icon: "users" }, LINKS[4]]
     : LINKS;
   const desktopLinks: { href: string; label: string; icon: IconName }[] = [
     ...LINKS,
@@ -86,7 +87,7 @@ export function Nav() {
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
         aria-label="Principal"
       >
-        <ul className={`mx-auto grid max-w-md ${mobileLinks.length === 5 ? "grid-cols-5" : "grid-cols-4"}`}>
+        <ul className={`mx-auto grid max-w-md ${mobileLinks.length === 6 ? "grid-cols-6" : "grid-cols-5"}`}>
           {mobileLinks.map((l) => {
             const active = isActive(l.href);
             return (
@@ -96,7 +97,7 @@ export function Nav() {
                   aria-current={active ? "page" : undefined}
                   className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${active ? "text-accent" : "text-muted"}`}
                 >
-                  <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}>
+                  <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}>
                     <Icon name={l.icon} size={20} strokeWidth={active ? 2.1 : 1.75} />
                   </span>
                   {l.label}

@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/Toast";
 const PERMS = [
   { key: "perm_dieta", label: "Criar e editar o meu plano alimentar", disabled: false },
   { key: "perm_progresso", label: "Ver o meu progresso (registos do dia, peso e resumo)", disabled: false },
-  { key: "perm_treino", label: "Criar o meu plano de treino (em breve)", disabled: true },
+  { key: "perm_treino", label: "Criar e editar o meu plano de treino (e ver as séries que registo)", disabled: false },
 ] as const;
 
 type Perms = { perm_dieta: boolean; perm_progresso: boolean; perm_treino: boolean };

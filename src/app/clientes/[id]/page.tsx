@@ -9,10 +9,11 @@ import { myLinks, type Link as TLink } from "@/lib/links";
 import { EmptyState, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
 import { PlanEditor } from "@/components/plano/PlanEditor";
+import { WorkoutEditor } from "@/components/treino/WorkoutEditor";
 import { WeightChart } from "@/components/resumo/WeightChart";
 import { CalorieChart, type CalDay } from "@/components/resumo/CalorieChart";
 
-type Tab = "plano" | "progresso";
+type Tab = "plano" | "treino" | "progresso";
 
 export default function ClientePage() {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +33,7 @@ export default function ClientePage() {
       const l = links.find((x) => x.papel === "treinador" && x.outra_id === id && x.status === "ativo") ?? null;
       setLink(l);
       if (!l) return;
-      if (!l.perm_dieta && l.perm_progresso) setTab("progresso");
+      if (!l.perm_dieta) setTab(l.perm_treino ? "treino" : "progresso");
       const p = await getClientProfile(sb, id);
       setProfile(p);
       if (!p || !l.perm_progresso) return;
@@ -98,6 +99,7 @@ export default function ClientePage() {
           </div>
           <div className="flex flex-wrap gap-1.5">
             {link.perm_dieta && <StatusBadge tone="accent">Plano alimentar</StatusBadge>}
+            {link.perm_treino && <StatusBadge tone="accent">Treino</StatusBadge>}
             {link.perm_progresso && <StatusBadge tone="accent">Progresso</StatusBadge>}
           </div>
         </div>
@@ -107,6 +109,11 @@ export default function ClientePage() {
         {link.perm_dieta && (
           <button role="tab" aria-selected={tab === "plano"} onClick={() => setTab("plano")} className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === "plano" ? "bg-accent text-on-accent" : "text-muted"}`}>
             Plano alimentar
+          </button>
+        )}
+        {link.perm_treino && (
+          <button role="tab" aria-selected={tab === "treino"} onClick={() => setTab("treino")} className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === "treino" ? "bg-accent text-on-accent" : "text-muted"}`}>
+            Treino
           </button>
         )}
         {link.perm_progresso && (
@@ -122,6 +129,8 @@ export default function ClientePage() {
           <PlanEditor ownerId={id} viewerId={viewer} targets={targets} names={{ [id]: `${name} (cliente)` }} />
         </>
       )}
+
+      {tab === "treino" && link.perm_treino && viewer && <WorkoutEditor ownerId={id} viewerId={viewer} names={{ [id]: `${name} (cliente)` }} />}
 
       {tab === "progresso" && link.perm_progresso && (
         <div className="space-y-5">
