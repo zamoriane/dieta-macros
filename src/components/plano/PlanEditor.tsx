@@ -44,7 +44,7 @@ export function PlanEditor({
   const load = useCallback(async () => {
     const [p, { data: ch }] = await Promise.all([
       getPlan(sb, ownerId),
-      sb.from("plan_changes").select("id, actor_id, acao, resumo, em").eq("owner_id", ownerId).order("em", { ascending: false }).limit(30),
+      sb.from("plan_changes").select("id, actor_id, acao, resumo, em").eq("owner_id", ownerId).order("em", { ascending: false }).order("id", { ascending: false }).limit(30),
     ]);
     setMeals(p.meals);
     setItems(p.items);

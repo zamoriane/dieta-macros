@@ -37,7 +37,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
       const [w, l, { data: ch }] = await Promise.all([
         getWorkout(sb, ownerId),
         getLogs(sb, ownerId, addDays(isoDay(), -60)),
-        sb.from("workout_changes").select("id, actor_id, acao, resumo, em").eq("owner_id", ownerId).order("em", { ascending: false }).limit(30),
+        sb.from("workout_changes").select("id, actor_id, acao, resumo, em").eq("owner_id", ownerId).order("em", { ascending: false }).order("id", { ascending: false }).limit(30),
       ]);
       setDays(w.days);
       setExs(w.exercises);

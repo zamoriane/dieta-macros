@@ -107,17 +107,17 @@ export default function ClientePage() {
 
       <div className="flex rounded-xl border border-line bg-card p-1 text-sm sm:w-fit" role="tablist">
         {link.perm_dieta && (
-          <button role="tab" aria-selected={tab === "plano"} onClick={() => setTab("plano")} className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === "plano" ? "bg-accent text-on-accent" : "text-muted"}`}>
+          <button role="tab" aria-selected={tab === "plano"} onClick={() => setTab("plano")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "plano" ? "bg-accent text-on-accent" : "text-muted"}`}>
             Plano alimentar
           </button>
         )}
         {link.perm_treino && (
-          <button role="tab" aria-selected={tab === "treino"} onClick={() => setTab("treino")} className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === "treino" ? "bg-accent text-on-accent" : "text-muted"}`}>
+          <button role="tab" aria-selected={tab === "treino"} onClick={() => setTab("treino")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "treino" ? "bg-accent text-on-accent" : "text-muted"}`}>
             Treino
           </button>
         )}
         {link.perm_progresso && (
-          <button role="tab" aria-selected={tab === "progresso"} onClick={() => setTab("progresso")} className={`min-h-9 flex-1 rounded-lg px-4 font-medium ${tab === "progresso" ? "bg-accent text-on-accent" : "text-muted"}`}>
+          <button role="tab" aria-selected={tab === "progresso"} onClick={() => setTab("progresso")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "progresso" ? "bg-accent text-on-accent" : "text-muted"}`}>
             Progresso
           </button>
         )}
