@@ -16,13 +16,21 @@ function pace(min: number | null, km?: number | null) {
   return `${m}:${String(s).padStart(2, "0")} /km`;
 }
 
+/** Atividades onde distância e ritmo fazem sentido. */
+const MOVING = /walk|run|hik|cycl|bik|caminh|corr|trilh|cicl|swim|nata|row|rem/i;
+
 export function WorkoutDialog({ workout, onClose }: { workout: Workout | null; onClose: () => void }) {
   const w = workout;
+  const moving = !!w && MOVING.test(w.name);
   const stats = w
     ? [
         { k: "Duração", v: w.min != null ? `${w.min} min` : "–" },
-        { k: "Distância", v: w.km != null ? `${w.km.toLocaleString("pt-PT")} km` : "–" },
-        { k: "Ritmo médio", v: pace(w.min, w.km) ?? "–" },
+        ...(moving
+          ? [
+              { k: "Distância", v: w.km != null ? `${w.km.toLocaleString("pt-PT")} km` : "–" },
+              { k: "Ritmo médio", v: pace(w.min, w.km) ?? "–" },
+            ]
+          : []),
         { k: "Calorias ativas", v: w.kcal != null ? `${w.kcal} kcal` : "–" },
         { k: "FC média", v: w.avg_hr != null ? `${w.avg_hr} bpm` : "–" },
         { k: "FC máxima", v: w.max_hr != null ? `${w.max_hr} bpm` : "–" },

@@ -73,7 +73,7 @@ export function ActivityCard({ oura, health, source }: { oura: OuraDay | null; h
                 <span className="min-w-0 flex-1">
                   <span className="block font-medium leading-snug">{w.name}</span>
                   <span className="tabular block text-xs text-muted">
-                    {[w.min != null && `${w.min} min`, w.km != null && `${w.km.toLocaleString("pt-PT")} km`, w.kcal != null && `${w.kcal} kcal`]
+                    {[w.min != null && `${w.min} min`, w.km != null && /walk|run|hik|cycl|bik|caminh|corr|trilh|cicl|swim|nata|row|rem/i.test(w.name) && `${w.km.toLocaleString("pt-PT")} km`, w.kcal != null && `${w.kcal} kcal`]
                       .filter(Boolean)
                       .join(" · ")}
                     {w.route ? " · mapa" : ""}
