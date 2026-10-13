@@ -64,3 +64,14 @@ test("alertas", () => {
   });
   assert.equal(alerts.length, 4);
 });
+
+import { waterReference } from "./nutrition.ts";
+
+test("referência de água", () => {
+  // Homem, gasto 2628 kcal, 75 min de treino: máx(2,5; 2,63) + 0,625 ≈ 3,3 L total; 2,6 L bebidas
+  const w = waterReference({ sex: "M", expenditureKcal: 2628, exerciseMin: 75 });
+  assert.equal(w.total, 3.3);
+  assert.equal(w.drinks, 2.6);
+  // Sem gasto conhecido: mínimo EFSA
+  assert.deepEqual(waterReference({ sex: "F" }).total, 2.0);
+});

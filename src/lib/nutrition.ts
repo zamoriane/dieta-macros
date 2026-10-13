@@ -177,3 +177,20 @@ export function adaptiveTdee(days: { intake: number | null; weight: number | nul
   const avgIntake = withBoth.reduce((s, d) => s + Number(d.intake), 0) / withBoth.length;
   return Math.round(avgIntake - (deltaKg * KCAL_PER_KG) / span);
 }
+
+/**
+ * Referência diária de água (informativa).
+ * - EFSA (2010): ingestão adequada de água total 2,5 L/dia (homens) e 2,0 L/dia (mulheres);
+ * - National Research Council (EUA): 1 mL por kcal de gasto energético;
+ * - Exercício: + 0,5 L por hora (ACSM: perdas de suor típicas 0,5–2 L/h; valor conservador).
+ * Água total inclui a dos alimentos (~20%); em bebidas ≈ 80% do total.
+ */
+export function waterReference(opts: { sex: "M" | "F" | null; expenditureKcal?: number | null; exerciseMin?: number | null }) {
+  const efsa = opts.sex === "F" ? 2.0 : 2.5;
+  const byEnergy = opts.expenditureKcal ? opts.expenditureKcal / 1000 : 0;
+  const base = Math.max(efsa, byEnergy);
+  const exercise = opts.exerciseMin ? (opts.exerciseMin / 60) * 0.5 : 0;
+  const total = Math.round((base + exercise) * 10) / 10;
+  const drinks = Math.round(total * 0.8 * 10) / 10;
+  return { total, drinks, efsa, byEnergy: Math.round(byEnergy * 10) / 10, exercise: Math.round(exercise * 10) / 10 };
+}

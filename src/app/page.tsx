@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { buildAlerts, type Alert } from "@/lib/nutrition";
+import { buildAlerts, waterReference, type Alert } from "@/lib/nutrition";
 import {
   addDays,
   addLogItem,
@@ -159,6 +159,10 @@ export default function HojePage() {
       })
     : [];
 
+  // Referência de água: gasto do dia + minutos de treino (Watch)
+  const workoutMin = (health?.workouts ?? []).reduce((s, w) => s + (w.min ?? 0), 0) || health?.exercise_min || 0;
+  const water = profile ? waterReference({ sex: profile.sexo, expenditureKcal: calc?.balance.expenditure, exerciseMin: workoutMin }) : undefined;
+
   // Refeições: as do plano (mesmo vazias) + as que só existem no dia
   const meals = new Map<string, { pos: number; items: LogItem[] }>();
   for (const pm of planMeals) meals.set(pm.nome, { pos: pm.posicao, items: [] });
@@ -308,7 +312,7 @@ export default function HojePage() {
               deficitTarget={profile?.deficit_alvo_kcal}
               isToday={isToday}
             />
-            <MacroCard totals={totals} targets={calc?.targets} sex={profile?.sexo} />
+            <MacroCard totals={totals} targets={calc?.targets} sex={profile?.sexo} water={water} />
             <ActivityCard oura={oura} health={health} source={source} />
           </div>
 
