@@ -19,7 +19,19 @@ export function MacroBar({ label, value, target, color }: { label: string; value
   );
 }
 
-export function DaySummary({ totals, targets, balance }: { totals: Macros; targets?: Targets; balance?: EnergyBalance }) {
+export function DaySummary({
+  totals,
+  targets,
+  balance,
+  projected,
+  liveActivity,
+}: {
+  totals: Macros;
+  targets?: Targets;
+  balance?: EnergyBalance;
+  projected?: boolean;
+  liveActivity?: number | null;
+}) {
   const remaining = targets ? targets.kcal - totals.kcal : null;
   const pct = targets ? Math.min(1, totals.kcal / targets.kcal) : 0;
   const R = 52;
@@ -57,15 +69,26 @@ export function DaySummary({ totals, targets, balance }: { totals: Macros; targe
       {balance && (
         <div className="tabular mt-4 grid grid-cols-2 gap-x-6 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-4">
           <Row k="Basal (TMB)" v={balance.bmr} />
-          <Row k={balance.source === "oura" ? "Atividade (Oura)" : "Atividade (estim.)"} v={balance.activity} />
+          <Row
+            k={projected ? "Atividade (prevista)" : balance.source === "oura" ? "Atividade (Oura)" : "Atividade (estim.)"}
+            v={balance.activity}
+          />
           <Row k="Gasto total" v={balance.expenditure} strong />
           <Row k="Ingerido" v={balance.intake} />
           <div className="col-span-2 mt-2 flex items-baseline justify-between rounded-xl bg-bg px-3 py-2 sm:col-span-4">
-            <span className="text-muted">{balance.deficit >= 0 ? "Défice" : "Excedente"}</span>
+            <span className="text-muted">
+              {balance.deficit >= 0 ? "Défice" : "Excedente"}
+              {projected ? " previsto" : ""}
+            </span>
             <span className={`text-xl font-semibold ${balance.deficit >= 0 ? "text-good" : "text-bad"}`}>
               {Math.abs(balance.deficit)} kcal
             </span>
           </div>
+          {projected && liveActivity != null && (
+            <p className="col-span-2 mt-1 text-xs text-muted sm:col-span-4">
+              Atividade até agora (Oura, corrigida): {liveActivity} kcal. A previsão usa a sua média dos últimos 14 dias.
+            </p>
+          )}
           {balance.ouraTotal != null && (
             <p className="col-span-2 mt-1 text-xs text-muted sm:col-span-4">
               Referência do Oura (total do dia): {balance.ouraTotal} kcal.

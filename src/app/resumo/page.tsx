@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptiveTdee, KCAL_PER_KG } from "@/lib/nutrition";
-import { addDays, computeDay, getProfile, isoDay, type OuraDay, type Profile } from "@/lib/data";
+import { addDays, avgOuraActive, computeDay, getProfile, isoDay, type OuraDay, type Profile } from "@/lib/data";
 
 type Period = "semana" | "mes";
 type Row = {
@@ -46,10 +46,11 @@ export default function ResumoPage() {
       const p = await getProfile(sb);
       setProfile(p);
       const histFrom = addDays(from < addDays(today, -28) ? from : addDays(today, -28), -30);
-      const [{ data: totals }, { data: oura }, { data: weights }] = await Promise.all([
+      const [{ data: totals }, { data: oura }, { data: weights }, avgActive] = await Promise.all([
         sb.from("daily_totals").select("*").gte("dia", histFrom).lte("dia", to < today ? to : today),
         sb.from("oura_daily").select("*").gte("dia", from).lte("dia", to),
         sb.from("weights").select("dia,kg").gte("dia", histFrom).lte("dia", to).order("dia"),
+        avgOuraActive(sb, today),
       ]);
       const tByDay = new Map((totals ?? []).map((t) => [t.dia as string, t]));
       const oByDay = new Map(((oura ?? []) as OuraDay[]).map((o) => [o.dia, o]));
@@ -64,7 +65,7 @@ export default function ResumoPage() {
         const totalsM = t
           ? { kcal: Number(t.kcal), protein: Number(t.protein), carbs: Number(t.carbs), fat: Number(t.fat), fiber: Number(t.fiber) }
           : null;
-        const calc = totalsM ? computeDay(p, kg, totalsM, o, d) : null;
+        const calc = totalsM ? computeDay(p, kg, totalsM, o, d, { isToday: d === today, avgActive }) : null;
         out.push({
           dia: d,
           kcal: totalsM?.kcal ?? null,

@@ -122,7 +122,9 @@ export default function PlanoPage() {
                   <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
                     <button className="min-w-0 flex-1 text-left" onClick={() => editGrams(it)}>
                       <div className="truncate text-sm">{it.foods.name}</div>
-                      <div className="tabular text-xs text-muted">{Number(it.gramas)} g</div>
+                      <div className="tabular text-xs text-muted">
+                        {Number(it.gramas)} g · {Math.round(Number(it.foods.kcal_100g))} kcal/100 g
+                      </div>
                     </button>
                     <div className="tabular text-right text-sm">
                       {Math.round(mm.kcal)}

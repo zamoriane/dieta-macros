@@ -125,7 +125,7 @@ export default function PerfilPage() {
           <Field label="Peso meta (kg)">
             <input inputMode="decimal" className="w-full" value={p.peso_meta_kg ?? ""} onChange={(e) => set("peso_meta_kg", num(e.target.value))} />
           </Field>
-          <Field label="Proteína (g por kg)" hint="1,6–2,2 em défice">
+          <Field label="Proteína (g por kg)" hint="1,6–2,2 em défice; usa o peso meta se definido">
             <input inputMode="decimal" className="w-full" value={p.proteina_g_kg} onChange={(e) => set("proteina_g_kg", num(e.target.value) ?? 1.8)} />
           </Field>
           <Field label="Gordura (% das kcal)">

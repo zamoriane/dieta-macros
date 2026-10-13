@@ -113,6 +113,13 @@ export async function ensureDay(sb: SupabaseClient, dia: string, copyPlan = true
     throw error;
   }
   if (!copyPlan) return true;
+  await applyPlanToDay(sb, dia);
+  return true;
+}
+
+/** Copia os itens do plano base para o dia (usado na criação do dia ou num dia que ficou vazio). */
+export async function applyPlanToDay(sb: SupabaseClient, dia: string): Promise<number> {
+  const userId = await getUserId(sb);
   const { meals, items } = await getPlan(sb);
   const rows = items.map((it) => {
     const meal = meals.find((m) => m.id === it.plan_meal_id)!;
@@ -130,10 +137,10 @@ export async function ensureDay(sb: SupabaseClient, dia: string, copyPlan = true
     };
   });
   if (rows.length) {
-    const { error: e2 } = await sb.from("log_items").insert(rows);
-    if (e2) throw e2;
+    const { error } = await sb.from("log_items").insert(rows);
+    if (error) throw error;
   }
-  return true;
+  return rows.length;
 }
 
 export async function getDayItems(sb: SupabaseClient, dia: string): Promise<LogItem[]> {
@@ -182,27 +189,61 @@ export function profileComplete(p: Profile): boolean {
   return !!(p.sexo && p.data_nascimento && p.altura_cm);
 }
 
-/** Junta perfil + peso + ingestão + Oura e devolve balanço e metas do dia. */
-export function computeDay(p: Profile, weightKg: number | null, totals: Macros, oura: OuraDay | null, dia: string) {
+/** Média das calorias ativas do Oura nos dias completos anteriores (null se houver menos de 3 dias). */
+export async function avgOuraActive(sb: SupabaseClient, before: string, days = 14): Promise<number | null> {
+  const { data } = await sb
+    .from("oura_daily")
+    .select("active_calories")
+    .gte("dia", addDays(before, -days))
+    .lt("dia", before)
+    .not("active_calories", "is", null);
+  const v = (data ?? []).map((r) => Number(r.active_calories)).filter((n) => n > 0);
+  return v.length >= 3 ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
+}
+
+/**
+ * Junta perfil + peso + ingestão + Oura e devolve balanço e metas do dia.
+ * Hoje: o Oura só tem a atividade ATÉ AGORA, por isso usa-se a previsão
+ * (maior entre a média dos últimos 14 dias e o já acumulado). Assim a meta
+ * não muda ao longo do dia e o défice não parece enorme de manhã.
+ */
+export function computeDay(
+  p: Profile,
+  weightKg: number | null,
+  totals: Macros,
+  oura: OuraDay | null,
+  dia: string,
+  opts: { isToday?: boolean; avgActive?: number | null } = {},
+) {
   if (!profileComplete(p) || !weightKg) return null;
   const bmr = bmrMifflin(p.sexo!, weightKg, Number(p.altura_cm), ageOn(p.data_nascimento!, new Date(dia + "T12:00:00")));
+  const live = oura?.active_calories ?? null;
+  let active: number | null = live;
+  let projected = false;
+  if (opts.isToday) {
+    active = live == null && opts.avgActive == null ? null : Math.max(live ?? 0, opts.avgActive ?? 0);
+    projected = active != null && active !== live;
+  }
   const balance = energyBalance({
     bmr,
     intakeKcal: totals.kcal,
-    ouraActiveKcal: oura?.active_calories ?? null,
-    ouraTotalKcal: oura?.total_calories ?? null,
+    ouraActiveKcal: active,
+    ouraTotalKcal: opts.isToday ? null : (oura?.total_calories ?? null),
     activityCorrection: Number(p.fator_correcao_atividade),
     manualActivityFactor: Number(p.fator_atividade_manual),
   });
+  // Proteína calculada pelo peso-meta quando definido (mais adequado com excesso de peso)
+  const proteinBase = p.peso_meta_kg ? Math.min(Number(p.peso_meta_kg), weightKg) : weightKg;
   const targets = dailyTargets({
     expenditure: balance.expenditure,
     deficit: p.deficit_alvo_kcal,
-    weightKg,
+    weightKg: proteinBase,
     proteinPerKg: Number(p.proteina_g_kg),
     fatPct: p.gordura_pct,
     minKcal: p.kcal_minimo,
   });
-  return { bmr, balance, targets };
+  const liveActivity = live != null ? Math.round(live * Number(p.fator_correcao_atividade)) : null;
+  return { bmr, balance, targets, projected, liveActivity };
 }
 
 export { sum };

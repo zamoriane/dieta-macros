@@ -6,6 +6,8 @@ import { buildAlerts, type Alert } from "@/lib/nutrition";
 import {
   addDays,
   addLogItem,
+  applyPlanToDay,
+  avgOuraActive,
   computeDay,
   ensureDay,
   getDayItems,
@@ -38,6 +40,8 @@ export default function HojePage() {
   const [oura, setOura] = useState<OuraDay | null>(null);
   const [lowStreak, setLowStreak] = useState(0);
   const [planMeals, setPlanMeals] = useState<{ nome: string; posicao: number }[]>([]);
+  const [planItemCount, setPlanItemCount] = useState(0);
+  const [avgActive, setAvgActive] = useState<number | null>(null);
   const [picker, setPicker] = useState<{ meal: string; pos: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,13 +54,16 @@ export default function HojePage() {
       if (dia === today) await ensureDay(sb, dia);
       const { data: d } = await sb.from("days").select("dia").eq("dia", dia).maybeSingle();
       setDayExists(!!d);
-      const [its, w, od, plan, prev] = await Promise.all([
+      const [its, w, od, plan, prev, avg] = await Promise.all([
         getDayItems(sb, dia),
         latestWeight(sb, dia),
         getOuraDays(sb, dia, dia),
         getPlan(sb),
         sb.from("daily_totals").select("dia,kcal").gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
+        avgOuraActive(sb, dia),
       ]);
+      setAvgActive(avg);
+      setPlanItemCount(plan.items.length);
       setItems(its);
       setWeight(w);
       setOura(od[0] ?? null);
@@ -97,7 +104,7 @@ export default function HojePage() {
   }, [load]);
 
   const totals = sum(items);
-  const calc = profile ? computeDay(profile, weight?.kg ?? null, totals, oura, dia) : null;
+  const calc = profile ? computeDay(profile, weight?.kg ?? null, totals, oura, dia, { isToday: dia === today, avgActive }) : null;
 
   const alerts: Alert[] = calc
     ? buildAlerts({
@@ -144,6 +151,11 @@ export default function HojePage() {
 
   async function createFromPlan() {
     await ensureDay(sb, dia, true);
+    load();
+  }
+
+  async function fillFromPlan() {
+    await applyPlanToDay(sb, dia);
     load();
   }
 
@@ -195,7 +207,16 @@ export default function HojePage() {
         </ul>
       )}
 
-      <DaySummary totals={totals} targets={calc?.targets} balance={calc?.balance} />
+      {!loading && dayExists && items.length === 0 && planItemCount > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/10 p-3 text-sm">
+          <span>Este dia está vazio.</span>
+          <button className="shrink-0 rounded-lg bg-accent px-3 py-1.5 font-medium text-white" onClick={fillFromPlan}>
+            Aplicar plano base
+          </button>
+        </div>
+      )}
+
+      <DaySummary totals={totals} targets={calc?.targets} balance={calc?.balance} projected={calc?.projected} liveActivity={calc?.liveActivity} />
 
       {oura && (
         <section className="tabular grid grid-cols-4 gap-2 text-center text-sm">
