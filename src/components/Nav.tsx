@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
 const LINKS: { href: string; label: string; icon: IconName }[] = [
@@ -10,7 +12,7 @@ const LINKS: { href: string; label: string; icon: IconName }[] = [
   { href: "/perfil", label: "Perfil", icon: "user" },
 ];
 
-const HIDDEN = ["/login", "/privacidade", "/termos"];
+const HIDDEN = ["/login", "/privacidade", "/termos", "/conta-desativada"];
 
 function Logo() {
   return (
@@ -28,7 +30,14 @@ function Logo() {
 
 export function Nav() {
   const path = usePathname();
-  if (HIDDEN.some((p) => path.startsWith(p))) return null;
+  const sb = useMemo(() => createClient(), []);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const hidden = HIDDEN.some((p) => path.startsWith(p));
+  useEffect(() => {
+    if (hidden) return;
+    sb.rpc("is_admin").then(({ data }: { data: boolean | null }) => setIsAdmin(!!data));
+  }, [sb, hidden]);
+  if (hidden) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
 
   return (
@@ -38,7 +47,7 @@ export function Nav() {
         <nav className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6" aria-label="Principal">
           <Logo />
           <ul className="flex items-center gap-1">
-            {LINKS.map((l) => (
+            {[...LINKS, ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "gauge" as IconName }] : [])].map((l) => (
               <li key={l.href}>
                 <Link
                   href={l.href}

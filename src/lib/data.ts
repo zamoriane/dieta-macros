@@ -33,6 +33,12 @@ export type Profile = {
   kcal_minimo: number;
   ingest_token: string | null;
   fonte_atividade: "oura" | "apple";
+  role?: "cliente" | "treinador" | "admin";
+  ativo?: boolean;
+  pt_estado?: "pendente" | "aprovado" | "recusado" | null;
+  pt_contacto_email?: string | null;
+  pt_pedido_em?: string | null;
+  trainer_code?: string | null;
 };
 
 export type LogItem = {

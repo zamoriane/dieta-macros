@@ -30,6 +30,17 @@ export async function middleware(request: NextRequest) {
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
+
+  // Conta desativada pelo admin: bloqueia o app (o banco também recusa os dados via RLS).
+  if (user && !PUBLIC.some((p) => path.startsWith(p)) && !path.startsWith("/conta-desativada") && !path.startsWith("/auth/")) {
+    const { data: active, error } = await supabase.rpc("is_active");
+    if (!error && active === false) {
+      if (path.startsWith("/api/")) return NextResponse.json({ error: "conta desativada" }, { status: 403 });
+      const url = request.nextUrl.clone();
+      url.pathname = "/conta-desativada";
+      return NextResponse.redirect(url);
+    }
+  }
   return response;
 }
 

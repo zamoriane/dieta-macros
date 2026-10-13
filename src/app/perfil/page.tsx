@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ageOn, bmrMifflin } from "@/lib/nutrition";
 import { getProfile, getUserId, isoDay, type Profile } from "@/lib/data";
+import { Icon } from "@/components/ui/Icon";
+import { toast } from "@/components/ui/Toast";
 
 const OURA_MSG: Record<string, string> = {
   ok: "Oura ligado e últimos 30 dias sincronizados.",
@@ -215,6 +217,18 @@ export default function PerfilPage() {
         </p>
       </section>
 
+      <TrainerSection p={p} email={email} onChange={load} sb={sb} />
+
+      {p.role === "admin" && (
+        <a href="/admin" className="card flex items-center gap-3 p-4 text-sm font-medium hover:bg-card-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent">
+            <Icon name="gauge" size={18} />
+          </span>
+          Administração — utilizadores e treinadores
+          <Icon name="chevronRight" size={16} className="ml-auto text-muted" />
+        </a>
+      )}
+
       <section className="rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">Oura</h2>
         {ouraMsg && <p className="mt-1 text-sm">{ouraMsg}</p>}
@@ -272,5 +286,99 @@ function Copyable({ label, value, copied, setCopied }: { label: string; value: s
         </button>
       </div>
     </div>
+  );
+}
+
+function TrainerSection({
+  p,
+  email,
+  onChange,
+  sb,
+}: {
+  p: Profile;
+  email: string;
+  onChange: () => void;
+  sb: ReturnType<typeof createClient>;
+}) {
+  const [want, setWant] = useState(false);
+  const [contact, setContact] = useState(p.pt_contacto_email || email);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+
+  async function setEstado(pt_estado: "pendente" | null) {
+    setBusy(true);
+    const { error } = await sb
+      .from("profiles")
+      .update(pt_estado ? { pt_estado, pt_contacto_email: contact.trim() } : { pt_estado: null })
+      .eq("id", p.id);
+    setBusy(false);
+    if (error) return toast(error.message, { kind: "erro" });
+    toast(pt_estado ? "Pedido enviado ao administrador" : "Pedido cancelado");
+    setWant(false);
+    onChange();
+  }
+
+  return (
+    <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
+      <h2 className="font-medium">Perfil Treinador (PT)</h2>
+
+      {p.pt_estado === "aprovado" && p.trainer_code ? (
+        <div className="space-y-2 text-sm">
+          <p className="text-muted">O seu Perfil Treinador está ativo. Partilhe este código com os seus clientes para eles se ligarem a si.</p>
+          <div className="flex items-center gap-2">
+            <code className="rounded-xl bg-accent-soft px-4 py-2 text-xl font-bold tracking-widest text-accent">{p.trainer_code}</code>
+            <button
+              className="btn btn-ghost !min-h-10"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(p.trainer_code!);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                } catch {}
+              }}
+            >
+              {copied ? "Copiado ✓" : "Copiar"}
+            </button>
+          </div>
+        </div>
+      ) : p.pt_estado === "pendente" ? (
+        <div className="space-y-2 text-sm">
+          <p>
+            Pedido enviado{p.pt_pedido_em ? ` em ${new Date(p.pt_pedido_em).toLocaleDateString("pt-PT")}` : ""}. Aguarda aprovação do administrador.
+          </p>
+          <p className="text-xs text-muted">Contacto indicado: {p.pt_contacto_email}</p>
+          <button className="btn btn-ghost !min-h-10" disabled={busy} onClick={() => setEstado(null)}>
+            Cancelar pedido
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3 text-sm">
+          {p.pt_estado === "recusado" && <p className="rounded-xl bg-card-2 p-3 text-muted">O pedido anterior não foi aprovado. Pode voltar a pedir.</p>}
+          <label className="flex items-start gap-3">
+            <input type="checkbox" className="mt-0.5 h-5 w-5 !min-h-0 accent-[var(--accent)]" checked={want} onChange={(e) => setWant(e.target.checked)} />
+            <span>
+              <span className="font-medium">Quero ativar o Perfil Treinador (PT)</span>
+              <span className="block text-xs text-muted">
+                Sujeito a aprovação do administrador. Com o perfil ativo, recebe um código único e os seus clientes podem dar-lhe acesso para criar o
+                plano alimentar e de treino deles.
+              </span>
+            </span>
+          </label>
+          {want && (
+            <div className="space-y-2 pl-8">
+              <label className="block">
+                <span className="text-xs font-medium">Email de contacto</span>
+                <input type="email" className="mt-1 w-full" value={contact} onChange={(e) => setContact(e.target.value)} />
+                {!validEmail && contact && <span className="mt-1 block text-xs text-bad">Indique um email válido.</span>}
+              </label>
+              <button className="btn btn-primary" disabled={busy || !validEmail} onClick={() => setEstado("pendente")}>
+                Enviar pedido
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
