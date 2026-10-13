@@ -3,10 +3,11 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/server";
 
-const AUTH_URL = "https://cloud.ouraring.com/oauth/authorize";
+// Endereço recomendado pelo Oura para clientes novos (abre a app Oura no telemóvel quando disponível)
+const AUTH_URL = "https://developer.ouraring.com/authorize";
 const TOKEN_URL = "https://api.ouraring.com/oauth/token";
 const API = "https://api.ouraring.com/v2/usercollection";
-export const OURA_SCOPES = "personal daily";
+export const OURA_SCOPES = "personal daily stress heartrate workout session spo2";
 
 export function authorizeUrl(state: string) {
   const p = new URLSearchParams({
