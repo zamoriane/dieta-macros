@@ -38,6 +38,9 @@
   --color-bad: var(--bad);
   --color-bad-soft: var(--bad-soft);
 
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+
   --radius-card: 1rem;
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 1px 3px rgb(16 24 40 / 0.04);
 }
@@ -55,6 +58,9 @@
   --accent-soft: rgb(13 148 136 / 0.1);
   --on-accent: #ffffff;
   --ring: #0d9488; /* anéis e destaques gráficos */
+  /* séries de gráficos (validadas: CVD e contraste, claro e escuro) */
+  --chart-1: #0d9488;
+  --chart-2: #6366f1;
 
   --prot: #3b82f6;
   --prot-ink: #1d4ed8;
