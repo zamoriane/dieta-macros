@@ -248,7 +248,7 @@ export default function HojePage() {
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{isToday ? greeting(profile?.nome) : "Registo do dia"}</h1>
-          <p className="text-sm capitalize text-muted">{fmtLong(dia)}</p>
+          <p className="text-sm text-muted first-letter:uppercase">{fmtLong(dia)}</p>
         </div>
         <div className="card px-1 py-1">
           <DateNavigator
@@ -284,7 +284,7 @@ export default function HojePage() {
       )}
 
       {loading && !profile ? (
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <div className="space-y-5">
             <Skeleton className="h-56" />
             <Skeleton className="h-44" />
@@ -296,8 +296,8 @@ export default function HojePage() {
           </div>
         </div>
       ) : (
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-          <div className="space-y-5 lg:sticky lg:top-24">
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+          <div className="min-w-0 space-y-5 lg:sticky lg:top-24">
             <CalorieCard
               totals={totals}
               targets={calc?.targets}
@@ -312,7 +312,7 @@ export default function HojePage() {
             <ActivityCard oura={oura} health={health} source={source} />
           </div>
 
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Refeições</h2>
               <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => setNewMealOpen(true)}>
