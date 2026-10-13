@@ -20,6 +20,8 @@ export default function PerfilPage() {
   const [ouraLinked, setOuraLinked] = useState(false);
   const [ouraMsg, setOuraMsg] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [lastIngest, setLastIngest] = useState<{ recebido_em: string; resumo: { dias?: string[]; metricas?: string[]; treinos?: number } } | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setP(await getProfile(sb));
@@ -29,6 +31,8 @@ export default function PerfilPage() {
     setOuraLinked((count ?? 0) > 0);
     const { data: u } = await sb.auth.getUser();
     setEmail(u.user?.email ?? "");
+    const { data: log } = await sb.from("health_ingest_log").select("recebido_em,resumo").order("recebido_em", { ascending: false }).limit(1);
+    setLastIngest(log?.[0] ?? null);
   }, [sb]);
 
   useEffect(() => {
@@ -163,6 +167,52 @@ export default function PerfilPage() {
         {saved ? "Guardado ✓" : "Guardar perfil"}
       </button>
 
+      <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
+        <h2 className="font-medium">Apple Watch (Health Auto Export)</h2>
+        <Field label="Fonte das calorias ativas" hint="sono, prontidão e stress continuam a vir do Oura">
+          <select className="w-full" value={p.fonte_atividade ?? "oura"} onChange={(e) => set("fonte_atividade", e.target.value as Profile["fonte_atividade"])}>
+            <option value="oura">Oura</option>
+            <option value="apple">Apple Watch</option>
+          </select>
+        </Field>
+        {p.ingest_token ? (
+          <div className="space-y-2 text-sm">
+            <Copyable label="URL" value={`${location.origin}/api/ingest/apple-health`} copied={copied} setCopied={setCopied} />
+            <Copyable label="Header Authorization" value={`Bearer ${p.ingest_token}`} copied={copied} setCopied={setCopied} />
+            <button
+              className="text-xs text-muted underline"
+              onClick={async () => {
+                if (!confirm("Gerar um token novo? O antigo deixa de funcionar e terá de atualizar a app no iPhone.")) return;
+                const t = newToken();
+                await sb.from("profiles").update({ ingest_token: t }).eq("id", p.id);
+                set("ingest_token", t);
+              }}
+            >
+              Gerar token novo
+            </button>
+          </div>
+        ) : (
+          <button
+            className="rounded-xl border border-line px-4 py-2 text-sm"
+            onClick={async () => {
+              const t = newToken();
+              const { error } = await sb.from("profiles").update({ ingest_token: t }).eq("id", p.id);
+              if (error) return alert(error.message);
+              set("ingest_token", t);
+            }}
+          >
+            Gerar token de envio
+          </button>
+        )}
+        <p className="text-xs text-muted">
+          {lastIngest
+            ? `Último envio: ${new Date(lastIngest.recebido_em).toLocaleString("pt-PT")} · dias ${lastIngest.resumo.dias?.join(", ") || "–"} · métricas: ${
+                lastIngest.resumo.metricas?.join(", ") || "nenhuma"
+              }${lastIngest.resumo.treinos ? ` · ${lastIngest.resumo.treinos} treinos` : ""}`
+            : "Ainda não chegou nenhum envio do iPhone."}
+        </p>
+      </section>
+
       <section className="rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">Oura</h2>
         {ouraMsg && <p className="mt-1 text-sm">{ouraMsg}</p>}
@@ -191,5 +241,34 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       <div className="mt-1">{children}</div>
       {hint && <span className="text-xs text-muted">{hint}</span>}
     </label>
+  );
+}
+
+function newToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return "dm_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function Copyable({ label, value, copied, setCopied }: { label: string; value: string; copied: string | null; setCopied: (v: string | null) => void }) {
+  return (
+    <div>
+      <div className="text-xs text-muted">{label}</div>
+      <div className="flex items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg bg-bg px-2 py-1.5 text-xs">{value}</code>
+        <button
+          className="shrink-0 rounded-lg border border-line px-2 py-1 text-xs"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(value);
+              setCopied(label);
+              setTimeout(() => setCopied(null), 1500);
+            } catch {}
+          }}
+        >
+          {copied === label ? "Copiado ✓" : "Copiar"}
+        </button>
+      </div>
+    </div>
   );
 }

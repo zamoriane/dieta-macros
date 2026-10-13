@@ -45,7 +45,13 @@ App web responsivo (PC, tablet, telemóvel) para organizar a dieta por macronutr
 3. Coloque `OURA_CLIENT_ID`, `OURA_CLIENT_SECRET` e `OURA_REDIRECT_URI` na Vercel e faça *Redeploy*.
 4. No app: **Perfil → Ligar ao Oura**.
 
-### 4. Primeiro uso
+### 4. Apple Watch (opcional, via Health Auto Export)
+1. No Supabase, rode `supabase/migrations/0002_apple_health.sql` no SQL Editor.
+2. No app: **Perfil → Apple Watch → Gerar token de envio**. Copie a URL e o header.
+3. No iPhone, na app **Health Auto Export**: *Automations → New → REST API*, cole a URL, formato **JSON**, versão **2**, agregação **diária**, intervalo **últimos 7 dias**, adicione o header `Authorization` com o valor copiado, e escolha as métricas (Active Energy, Basal Energy Burned, Step Count, Exercise Time, Sleep Analysis, Resting Heart Rate, HRV, Weight) e Workouts.
+4. No Perfil, escolha a fonte das calorias ativas (Oura ou Apple Watch).
+
+### 5. Primeiro uso
 1. Crie a conta no ecrã de login e confirme o email.
 2. **Perfil**: sexo, data de nascimento, altura, peso de hoje, metas.
 3. **Plano**: crie as refeições padrão e adicione os alimentos.

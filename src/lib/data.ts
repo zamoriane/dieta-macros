@@ -30,6 +30,8 @@ export type Profile = {
   fator_correcao_atividade: number;
   fator_atividade_manual: number;
   kcal_minimo: number;
+  ingest_token: string | null;
+  fonte_atividade: "oura" | "apple";
 };
 
 export type LogItem = {
@@ -185,19 +187,62 @@ export async function getOuraDays(sb: SupabaseClient, from: string, to: string):
   return (data ?? []) as OuraDay[];
 }
 
+export type HealthDayRow = {
+  dia: string;
+  active_kcal: number | null;
+  steps: number | null;
+  exercise_min: number | null;
+  sleep_min: number | null;
+  resting_hr: number | null;
+  workouts: { name: string; start: string; min: number | null; kcal: number | null }[];
+};
+
+export async function getHealthDays(sb: SupabaseClient, from: string, to: string): Promise<HealthDayRow[]> {
+  const { data } = await sb.from("health_daily").select("*").gte("dia", from).lte("dia", to).order("dia");
+  return (data ?? []) as HealthDayRow[];
+}
+
+/**
+ * Dias de atividade na forma usada pelos cálculos. Sono, prontidão e stress vêm sempre do Oura;
+ * calorias ativas e passos vêm da fonte escolhida no perfil (Oura ou Apple Watch).
+ */
+export async function getActivityDays(sb: SupabaseClient, from: string, to: string, source: "oura" | "apple"): Promise<OuraDay[]> {
+  const oura = await getOuraDays(sb, from, to);
+  if (source !== "apple") return oura;
+  const health = await getHealthDays(sb, from, to);
+  const byDay = new Map<string, OuraDay>(oura.map((o) => [o.dia, { ...o }]));
+  for (const h of health) {
+    const base: OuraDay = byDay.get(h.dia) ?? {
+      dia: h.dia,
+      active_calories: null,
+      total_calories: null,
+      steps: null,
+      sleep_score: null,
+      readiness_score: null,
+      stress_high_min: null,
+      stress_summary: null,
+    };
+    byDay.set(h.dia, { ...base, active_calories: h.active_kcal, total_calories: null, steps: h.steps ?? base.steps });
+  }
+  // Sem dados da Apple num dia: não usar o Oura em silêncio (seriam fontes misturadas)
+  for (const [d, o] of byDay) if (!health.some((h) => h.dia === d)) byDay.set(d, { ...o, active_calories: null, total_calories: null });
+  return [...byDay.values()].sort((a, b) => a.dia.localeCompare(b.dia));
+}
+
 export function profileComplete(p: Profile): boolean {
   return !!(p.sexo && p.data_nascimento && p.altura_cm);
 }
 
 /** Média das calorias ativas do Oura nos dias completos anteriores (null se houver menos de 3 dias). */
-export async function avgOuraActive(sb: SupabaseClient, before: string, days = 14): Promise<number | null> {
+export async function avgOuraActive(sb: SupabaseClient, before: string, days = 14, source: "oura" | "apple" = "oura"): Promise<number | null> {
+  const [table, col] = source === "apple" ? ["health_daily", "active_kcal"] : ["oura_daily", "active_calories"];
   const { data } = await sb
-    .from("oura_daily")
-    .select("active_calories")
+    .from(table)
+    .select(col)
     .gte("dia", addDays(before, -days))
     .lt("dia", before)
-    .not("active_calories", "is", null);
-  const v = (data ?? []).map((r) => Number(r.active_calories)).filter((n) => n > 0);
+    .not(col, "is", null);
+  const v = (data ?? []).map((r) => Number((r as Record<string, unknown>)[col])).filter((n) => n > 0);
   return v.length >= 3 ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
 }
 

@@ -11,7 +11,9 @@ import {
   computeDay,
   ensureDay,
   getDayItems,
-  getOuraDays,
+  getActivityDays,
+  getHealthDays,
+  type HealthDayRow,
   getPlan,
   getProfile,
   isoDay,
@@ -42,6 +44,7 @@ export default function HojePage() {
   const [planMeals, setPlanMeals] = useState<{ nome: string; posicao: number }[]>([]);
   const [planItemCount, setPlanItemCount] = useState(0);
   const [avgActive, setAvgActive] = useState<number | null>(null);
+  const [health, setHealth] = useState<HealthDayRow | null>(null);
   const [picker, setPicker] = useState<{ meal: string; pos: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,14 +57,17 @@ export default function HojePage() {
       if (dia === today) await ensureDay(sb, dia);
       const { data: d } = await sb.from("days").select("dia").eq("dia", dia).maybeSingle();
       setDayExists(!!d);
-      const [its, w, od, plan, prev, avg] = await Promise.all([
+      const src = p.fonte_atividade ?? "oura";
+      const [its, w, od, plan, prev, avg, hd] = await Promise.all([
         getDayItems(sb, dia),
         latestWeight(sb, dia),
-        getOuraDays(sb, dia, dia),
+        getActivityDays(sb, dia, dia, src),
         getPlan(sb),
         sb.from("daily_totals").select("dia,kcal").gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
-        avgOuraActive(sb, dia),
+        avgOuraActive(sb, dia, 14, src),
+        getHealthDays(sb, dia, dia),
       ]);
+      setHealth(hd[0] ?? null);
       setAvgActive(avg);
       setPlanItemCount(plan.items.length);
       setItems(its);
@@ -216,7 +222,10 @@ export default function HojePage() {
         </div>
       )}
 
-      <DaySummary totals={totals} targets={calc?.targets} balance={calc?.balance} projected={calc?.projected} liveActivity={calc?.liveActivity} />
+      <DaySummary totals={totals} targets={calc?.targets} balance={calc?.balance} projected={calc?.projected}
+        liveActivity={calc?.liveActivity}
+        sourceName={profile?.fonte_atividade === "apple" ? "Apple Watch" : "Oura"}
+      />
 
       {oura && (
         <section className="tabular grid grid-cols-4 gap-2 text-center text-sm">
@@ -224,6 +233,27 @@ export default function HojePage() {
           <Mini label="Prontidão" value={oura.readiness_score} />
           <Mini label="Passos" value={oura.steps} />
           <Mini label="Stress alto" value={oura.stress_high_min != null ? `${oura.stress_high_min}m` : null} />
+        </section>
+      )}
+
+      {health && (health.workouts?.length > 0 || health.exercise_min != null) && (
+        <section className="rounded-2xl border border-line bg-card px-4 py-3 text-sm">
+          <div className="flex justify-between text-xs text-muted">
+            <span>Apple Watch</span>
+            <span className="tabular">
+              {health.active_kcal != null && `${health.active_kcal} kcal ativas`}
+              {health.exercise_min != null && ` · ${health.exercise_min} min exercício`}
+            </span>
+          </div>
+          {health.workouts?.map((w, i) => (
+            <div key={i} className="tabular mt-1 flex justify-between">
+              <span>{w.name}</span>
+              <span className="text-muted">
+                {w.min != null && `${w.min} min`}
+                {w.kcal != null && ` · ${w.kcal} kcal`}
+              </span>
+            </div>
+          ))}
         </section>
       )}
 

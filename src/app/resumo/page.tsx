@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptiveTdee, KCAL_PER_KG } from "@/lib/nutrition";
-import { addDays, avgOuraActive, computeDay, getProfile, isoDay, type OuraDay, type Profile } from "@/lib/data";
+import { addDays, avgOuraActive, computeDay, getActivityDays, getProfile, isoDay, type OuraDay, type Profile } from "@/lib/data";
 
 type Period = "semana" | "mes";
 type Row = {
@@ -48,9 +48,9 @@ export default function ResumoPage() {
       const histFrom = addDays(from < addDays(today, -28) ? from : addDays(today, -28), -30);
       const [{ data: totals }, { data: oura }, { data: weights }, avgActive] = await Promise.all([
         sb.from("daily_totals").select("*").gte("dia", histFrom).lte("dia", to < today ? to : today),
-        sb.from("oura_daily").select("*").gte("dia", from).lte("dia", to),
+        getActivityDays(sb, from, to, p.fonte_atividade ?? "oura").then((data) => ({ data })),
         sb.from("weights").select("dia,kg").gte("dia", histFrom).lte("dia", to).order("dia"),
-        avgOuraActive(sb, today),
+        avgOuraActive(sb, today, 14, p.fonte_atividade ?? "oura"),
       ]);
       const tByDay = new Map((totals ?? []).map((t) => [t.dia as string, t]));
       const oByDay = new Map(((oura ?? []) as OuraDay[]).map((o) => [o.dia, o]));

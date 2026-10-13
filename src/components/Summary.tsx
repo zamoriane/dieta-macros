@@ -25,12 +25,14 @@ export function DaySummary({
   balance,
   projected,
   liveActivity,
+  sourceName = "Oura",
 }: {
   totals: Macros;
   targets?: Targets;
   balance?: EnergyBalance;
   projected?: boolean;
   liveActivity?: number | null;
+  sourceName?: string;
 }) {
   const remaining = targets ? targets.kcal - totals.kcal : null;
   const pct = targets ? Math.min(1, totals.kcal / targets.kcal) : 0;
@@ -70,7 +72,7 @@ export function DaySummary({
         <div className="tabular mt-4 grid grid-cols-2 gap-x-6 gap-y-1 border-t border-line pt-3 text-sm sm:grid-cols-4">
           <Row k="Basal (TMB)" v={balance.bmr} />
           <Row
-            k={projected ? "Atividade (prevista)" : balance.source === "oura" ? "Atividade (Oura)" : "Atividade (estim.)"}
+            k={projected ? "Atividade (prevista)" : balance.source === "oura" ? `Atividade (${sourceName})` : "Atividade (estim.)"}
             v={balance.activity}
           />
           <Row k="Gasto total" v={balance.expenditure} strong />
@@ -86,12 +88,12 @@ export function DaySummary({
           </div>
           {projected && liveActivity != null && (
             <p className="col-span-2 mt-1 text-xs text-muted sm:col-span-4">
-              Atividade até agora (Oura, corrigida): {liveActivity} kcal. A previsão usa a sua média dos últimos 14 dias.
+              Atividade até agora ({sourceName}, corrigida): {liveActivity} kcal. A previsão usa a sua média dos últimos 14 dias.
             </p>
           )}
           {balance.ouraTotal != null && (
             <p className="col-span-2 mt-1 text-xs text-muted sm:col-span-4">
-              Referência do Oura (total do dia): {balance.ouraTotal} kcal.
+              Referência do {sourceName} (total do dia): {balance.ouraTotal} kcal.
             </p>
           )}
         </div>
