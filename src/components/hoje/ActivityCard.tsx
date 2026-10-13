@@ -60,10 +60,12 @@ export function ActivityCard({ oura, health, source }: { oura: OuraDay | null; h
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
                 <Icon name="dumbbell" size={18} />
               </span>
-              <span className="min-w-0 flex-1 truncate font-medium">{w.name}</span>
-              <span className="tabular shrink-0 text-muted">
-                {w.min != null && `${w.min} min`}
-                {w.kcal != null && ` · ${w.kcal} kcal`}
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium leading-snug">{w.name}</span>
+                <span className="tabular block text-xs text-muted">
+                  {w.min != null && `${w.min} min`}
+                  {w.kcal != null && ` · ${w.kcal} kcal`}
+                </span>
               </span>
               <SourceBadge source="apple" />
             </li>

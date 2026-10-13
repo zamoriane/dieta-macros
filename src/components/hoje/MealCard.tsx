@@ -31,7 +31,7 @@ export function MealCard({
     <section className="card overflow-hidden">
       <div className="flex items-center gap-2 pr-2">
         <button
-          className="flex min-h-16 min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left hover:bg-card-2/60"
+          className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-4 pr-1 text-left hover:bg-card-2/60"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls={id}
@@ -43,9 +43,19 @@ export function MealCard({
             <Icon name={empty ? "plus" : "check"} size={18} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate font-semibold">{name}</span>
+            <span className="block font-semibold leading-snug">{name}</span>
             <span className="tabular block text-xs text-muted">
-              {empty ? "Vazio" : `${items.length} ${items.length === 1 ? "alimento" : "alimentos"} · P ${Math.round(t.protein)} g · C ${Math.round(t.carbs)} · G ${Math.round(t.fat)}`}
+              {empty ? (
+                "Vazio"
+              ) : (
+                <>
+                  {items.length} {items.length === 1 ? "item" : "itens"} · P {Math.round(t.protein)} g
+                  <span className="hidden sm:inline">
+                    {" "}
+                    · C {Math.round(t.carbs)} · G {Math.round(t.fat)}
+                  </span>
+                </>
+              )}
             </span>
           </span>
           <span className="tabular shrink-0 text-right">
