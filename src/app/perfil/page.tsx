@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
 import { TrainerLinks } from "@/components/perfil/TrainerLinks";
 import { AvatarEditor } from "@/components/perfil/AvatarEditor";
+import { MeasurementsCard } from "@/components/medidas/MeasurementsCard";
 import { notifyProfileChanged } from "@/lib/avatar";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/core";
@@ -112,6 +113,8 @@ export default function PerfilPage() {
           </ul>
         )}
       </section>
+
+      <MeasurementsCard uid={p.id} sex={p.sexo ?? null} heightCm={p.altura_cm ? Number(p.altura_cm) : null} />
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">{t("perfil.dadosBasal")}</h2>

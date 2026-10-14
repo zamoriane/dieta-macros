@@ -13,6 +13,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { PlanEditor } from "@/components/plano/PlanEditor";
 import { WorkoutEditor } from "@/components/treino/WorkoutEditor";
 import { WeightChart } from "@/components/resumo/WeightChart";
+import { BodyProgress } from "@/components/medidas/BodyProgress";
 import { CalorieChart, type CalDay } from "@/components/resumo/CalorieChart";
 
 type Tab = "plano" | "treino" | "progresso";
@@ -151,6 +152,7 @@ export default function ClientePage() {
               {days.length ? <CalorieChart days={days} weekly={false} /> : <Skeleton className="h-56" />}
             </SectionCard>
             <WeightChart weights={weights} goal={profile?.peso_meta_kg && Number(profile.peso_meta_kg) >= 40 ? Number(profile.peso_meta_kg) : null} />
+            <BodyProgress owner={id} sex={profile?.sexo ?? null} heightCm={profile?.altura_cm ? Number(profile.altura_cm) : null} />
           </div>
         </div>
       )}

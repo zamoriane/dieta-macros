@@ -7,6 +7,7 @@ import { PageHeader, SectionCard, Skeleton, StatusBadge } from "@/components/ui/
 import { Icon } from "@/components/ui/Icon";
 import { CalorieChart } from "@/components/resumo/CalorieChart";
 import { WeightChart } from "@/components/resumo/WeightChart";
+import { BodyProgress } from "@/components/medidas/BodyProgress";
 import { useI18n } from "@/lib/i18n/client";
 
 type Period = "semana" | "mes";
@@ -186,6 +187,7 @@ export default function ResumoPage() {
           {rows.length ? <CalorieChart days={rows} weekly={period === "semana"} /> : <Skeleton className="h-56" />}
         </SectionCard>
         <WeightChart weights={weights} goal={goal} />
+        {profile && <BodyProgress owner={profile.id} sex={profile.sexo ?? null} heightCm={profile.altura_cm ? Number(profile.altura_cm) : null} />}
       </div>
 
       {tdee != null && (
