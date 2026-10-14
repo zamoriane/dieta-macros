@@ -36,6 +36,7 @@ import { ActivityCard } from "@/components/hoje/ActivityCard";
 import { MealCard } from "@/components/hoje/MealCard";
 import { AlertsBar } from "@/components/hoje/AlertsBar";
 import { useI18n } from "@/lib/i18n/client";
+import { autoSyncHealth } from "@/lib/nativeHealthClient";
 
 function greeting(t: ReturnType<typeof useI18n>["t"], name?: string | null) {
   const h = new Date().getHours();
@@ -122,6 +123,13 @@ export default function HojePage() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  // Na app nativa: lê a Apple Saúde / Health Connect ao abrir (no máximo de 30 em 30 min).
+  useEffect(() => {
+    autoSyncHealth()
+      .then((did) => did && load())
+      .catch(() => {});
   }, [load]);
 
   // Sincroniza o Oura ao abrir, no máximo uma vez por hora.

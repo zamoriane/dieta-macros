@@ -1,0 +1,22 @@
+{
+  "name": "taking-care-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "App nativa (iOS/Android) que abre https://dieta-macros.vercel.app e dá acesso à Apple Saúde / Health Connect.",
+  "scripts": {
+    "ios:prepare": "sh scripts/prepare-ios.sh"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capgo/capacitor-health": "^8.7.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/assets": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

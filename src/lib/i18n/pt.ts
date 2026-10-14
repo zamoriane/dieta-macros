@@ -595,5 +595,12 @@ export const pt = {
   "apagar.err.ultimoAdmin": "É o único administrador. Nomeie outro administrador antes de apagar a conta.",
   "legal.privacidade": "Privacidade",
   "legal.termos": "Termos",
+  "saude.appleSaude": "Apple Saúde",
+  "saude.dica": "Lê de {nome} as calorias ativas e basais, passos, minutos de exercício, sono, frequência cardíaca em repouso, variabilidade cardíaca, peso e treinos. Só leitura: a app não escreve nada em {nome}.",
+  "saude.ligar": "Ligar a {nome}",
+  "saude.ligado": "Ligado ✓",
+  "saude.sincronizar": "Sincronizar agora",
+  "saude.sincronizado": "{n} dias sincronizados",
+  "saude.indisponivel": "{nome} não está disponível neste aparelho.",
   // @@END
 } as const;

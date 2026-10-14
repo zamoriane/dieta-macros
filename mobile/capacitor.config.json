@@ -1,0 +1,18 @@
+{
+  "appId": "com.zamoriane.takingcare",
+  "appName": "Taking care",
+  "webDir": "www",
+  "server": {
+    "url": "https://dieta-macros.vercel.app",
+    "cleartext": false,
+    "errorPath": "offline.html"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#f5f7fa",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "backgroundColor": "#f5f7fa"
+  }
+}

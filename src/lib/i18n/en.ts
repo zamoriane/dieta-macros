@@ -596,5 +596,12 @@ export const en: Messages = {
   "apagar.err.ultimoAdmin": "You're the only administrator. Make someone else an administrator before deleting your account.",
   "legal.privacidade": "Privacy",
   "legal.termos": "Terms",
+  "saude.appleSaude": "Apple Health",
+  "saude.dica": "Reads active and basal calories, steps, exercise minutes, sleep, resting heart rate, heart rate variability, weight and workouts from {nome}. Read-only: the app writes nothing to {nome}.",
+  "saude.ligar": "Connect {nome}",
+  "saude.ligado": "Connected ✓",
+  "saude.sincronizar": "Sync now",
+  "saude.sincronizado": "{n} days synced",
+  "saude.indisponivel": "{nome} isn't available on this device.",
   // @@END
 };

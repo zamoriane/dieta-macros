@@ -9,6 +9,7 @@ import { TrainerLinks } from "@/components/perfil/TrainerLinks";
 import { AvatarEditor } from "@/components/perfil/AvatarEditor";
 import { MeasurementsCard } from "@/components/medidas/MeasurementsCard";
 import { DeleteAccount } from "@/components/perfil/DeleteAccount";
+import { NativeHealthCard } from "@/components/perfil/NativeHealthCard";
 import { notifyProfileChanged } from "@/lib/avatar";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/core";
@@ -190,6 +191,16 @@ export default function PerfilPage() {
       <button className="w-full rounded-xl bg-accent py-3 font-medium text-on-accent" onClick={save}>
         {saved ? t("perfil.guardado") : t("perfil.guardar")}
       </button>
+
+      <NativeHealthCard
+        onConnected={async () => {
+          if (p.fonte_atividade !== "apple") {
+            await sb.from("profiles").update({ fonte_atividade: "apple" }).eq("id", p.id);
+            set("fonte_atividade", "apple");
+          }
+          load();
+        }}
+      />
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">Apple Watch (Health Auto Export)</h2>
