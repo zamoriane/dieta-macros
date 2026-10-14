@@ -606,5 +606,16 @@ export const en: Messages = {
   "auth.google": "Continue with Google",
   "auth.ou": "or",
   "auth.apple": "Continue with Apple",
+  "ligadas.titulo": "Linked accounts",
+  "ligadas.dica": "Link Google or Apple to sign in to this same account with either of them.",
+  "ligadas.ligar": "Link",
+  "ligadas.desligar": "Unlink",
+  "ligadas.confirmarDesligar": "Unlink now",
+  "ligadas.ligada": "Linked",
+  "ligadas.naoLigada": "Not linked",
+  "ligadas.ok": "Account linked.",
+  "ligadas.desligada": "Account unlinked.",
+  "ligadas.err.desativado": "Account linking isn't enabled yet. Please try later.",
+  "ligadas.err.outraConta": "That account already belongs to another user of the app. Sign in with it, delete that account and link it here again.",
   // @@END
 };

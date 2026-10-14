@@ -605,5 +605,16 @@ export const pt = {
   "auth.google": "Continuar com Google",
   "auth.ou": "ou",
   "auth.apple": "Continuar com a Apple",
+  "ligadas.titulo": "Contas ligadas",
+  "ligadas.dica": "Ligue a Google ou a Apple para entrar nesta mesma conta com qualquer uma delas.",
+  "ligadas.ligar": "Ligar",
+  "ligadas.desligar": "Desligar",
+  "ligadas.confirmarDesligar": "Desligar mesmo",
+  "ligadas.ligada": "Ligada",
+  "ligadas.naoLigada": "Não ligada",
+  "ligadas.ok": "Conta ligada.",
+  "ligadas.desligada": "Conta desligada.",
+  "ligadas.err.desativado": "A ligação de contas ainda não está ativa. Tente mais tarde.",
+  "ligadas.err.outraConta": "Essa conta já está associada a outro utilizador da app. Entre com ela, apague essa conta e volte a ligar aqui.",
   // @@END
 } as const;

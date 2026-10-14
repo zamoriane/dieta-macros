@@ -10,6 +10,7 @@ import { AvatarEditor } from "@/components/perfil/AvatarEditor";
 import { MeasurementsCard } from "@/components/medidas/MeasurementsCard";
 import { DeleteAccount } from "@/components/perfil/DeleteAccount";
 import { NativeHealthCard } from "@/components/perfil/NativeHealthCard";
+import { LinkedAccounts } from "@/components/perfil/LinkedAccounts";
 import { notifyProfileChanged } from "@/lib/avatar";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/core";
@@ -308,6 +309,7 @@ export default function PerfilPage() {
           </form>
           <DeleteAccount email={email} />
         </div>
+        <LinkedAccounts />
         <p className="flex gap-4 text-xs text-muted">
           <a href="/privacidade" className="hover:text-ink">
             {t("legal.privacidade")}

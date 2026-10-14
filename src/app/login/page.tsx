@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import { authErrorKey } from "@/lib/i18n/authErrors";
 import { isNativeApp, nativePlatform } from "@/lib/nativeHealthClient";
-import { nativeAppleSignIn, nativeGoogleSignIn } from "@/lib/nativeAuth";
+import { nativeSignIn } from "@/lib/nativeAuth";
 
 // Ligar quando o fornecedor Google estiver configurado no Supabase (NEXT_PUBLIC_AUTH_GOOGLE=1 na Vercel).
 const GOOGLE_ON = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
@@ -43,7 +43,7 @@ export default function LoginPage() {
     setMsg(null);
     // Na app, a Google bloqueia o login dentro da WebView e a Apple tem folha nativa.
     if (isNativeApp()) {
-      const r = provider === "google" ? await nativeGoogleSignIn(sb) : await nativeAppleSignIn(sb);
+      const r = await nativeSignIn(sb, provider);
       setBusy(false);
       if (r.error) return setMsg(errText(r.error));
       if (r.cancelled) return;

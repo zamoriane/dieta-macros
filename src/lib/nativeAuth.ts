@@ -37,55 +37,66 @@ function social(): SocialLoginPlugin {
 
 const hex = (b: ArrayBuffer | Uint8Array) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
 
-/** Abre o ecrã nativo da Google e inicia sessão no Supabase. Devolve null se o utilizador cancelar. */
-export async function nativeGoogleSignIn(sb: SupabaseClient): Promise<{ error: string | null; cancelled?: boolean }> {
+type Provider = "google" | "apple";
+type TokenResult = { token: string; nonce?: string; name?: string } | { cancelled: true } | { error: string };
+
+/** Abre o ecrã nativo (Google ou Apple) e devolve o idToken. */
+async function nativeIdToken(provider: Provider): Promise<TokenResult> {
   const p = social();
   await ready;
-  const rawNonce = hex(crypto.getRandomValues(new Uint8Array(32)));
-  const nonceDigest = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(rawNonce)));
-
-  let idToken: string | null | undefined;
+  let nonce: string | undefined;
+  let digest: string | undefined;
+  if (provider === "google") {
+    nonce = hex(crypto.getRandomValues(new Uint8Array(32)));
+    digest = hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(nonce)));
+  }
+  let r: LoginResult;
   try {
-    const r = await p.login({ provider: "google", options: { scopes: ["email", "profile"], nonce: nonceDigest } });
-    idToken = r.result?.idToken;
+    r = await p.login({
+      provider,
+      options: provider === "google" ? { scopes: ["email", "profile"], nonce: digest } : { scopes: ["name", "email"] },
+    });
   } catch (e) {
     const m = e instanceof Error ? e.message : String(e);
-    if (/cancel/i.test(m)) return { error: null, cancelled: true };
+    if (/cancel|1001/i.test(m)) return { cancelled: true };
     return { error: m };
   }
-  if (!idToken) return { error: "Google: sem idToken" };
+  const token = r.result?.idToken;
+  if (!token) return { error: `${provider}: sem idToken` };
+  const pr = r.result?.profile;
+  const name = (pr?.name || [pr?.givenName, pr?.familyName].filter(Boolean).join(" ")).trim().slice(0, 80) || undefined;
+  return { token, nonce, name };
+}
 
-  const { error } = await sb.auth.signInWithIdToken({ provider: "google", token: idToken, nonce: rawNonce });
+async function forget(provider: Provider) {
+  // O SDK da Google pode reutilizar um token antigo (nonce diferente): sair para a próxima tentativa ser limpa.
+  if (provider === "google") await social().logout({ provider }).catch(() => {});
+}
+
+/** Login nativo (Google ou Apple) e sessão no Supabase. */
+export async function nativeSignIn(sb: SupabaseClient, provider: Provider): Promise<{ error: string | null; cancelled?: boolean }> {
+  const r = await nativeIdToken(provider);
+  if ("cancelled" in r) return { error: null, cancelled: true };
+  if ("error" in r) return { error: r.error };
+  const { data, error } = await sb.auth.signInWithIdToken({ provider, token: r.token, nonce: r.nonce });
   if (error) {
-    // O SDK da Google pode reutilizar um token antigo (nonce diferente): sair e deixar tentar de novo.
-    await p.logout({ provider: "google" }).catch(() => {});
+    await forget(provider);
     return { error: error.message };
   }
+  // A Apple só envia o nome no primeiro login: guardá-lo no perfil se ainda estiver vazio.
+  if (r.name && data.user) await sb.from("profiles").update({ nome: r.name }).eq("id", data.user.id).is("nome", null);
   return { error: null };
 }
 
-/** Folha nativa "Iniciar sessão com a Apple" (iOS) e sessão no Supabase. */
-export async function nativeAppleSignIn(sb: SupabaseClient): Promise<{ error: string | null; cancelled?: boolean }> {
-  const p = social();
-  await ready;
-  let r: LoginResult;
-  try {
-    r = await p.login({ provider: "apple", options: { scopes: ["name", "email"] } });
-  } catch (e) {
-    const m = e instanceof Error ? e.message : String(e);
-    if (/cancel|1001/i.test(m)) return { error: null, cancelled: true };
-    return { error: m };
-  }
-  const idToken = r.result?.idToken;
-  if (!idToken) return { error: "Apple: sem idToken" };
-  const { data, error } = await sb.auth.signInWithIdToken({ provider: "apple", token: idToken });
-  if (error) return { error: error.message };
-
-  // A Apple só envia o nome no primeiro login: guardá-lo no perfil se ainda estiver vazio.
-  const pr = r.result?.profile;
-  const nome = (pr?.name || [pr?.givenName, pr?.familyName].filter(Boolean).join(" ")).trim().slice(0, 80);
-  if (nome && data.user) {
-    await sb.from("profiles").update({ nome }).eq("id", data.user.id).is("nome", null);
+/** Liga uma conta Google/Apple à sessão atual (dentro da app). */
+export async function nativeLink(sb: SupabaseClient, provider: Provider): Promise<{ error: string | null; cancelled?: boolean }> {
+  const r = await nativeIdToken(provider);
+  if ("cancelled" in r) return { error: null, cancelled: true };
+  if ("error" in r) return { error: r.error };
+  const { error } = await sb.auth.linkIdentity({ provider, token: r.token, nonce: r.nonce });
+  if (error) {
+    await forget(provider);
+    return { error: error.message };
   }
   return { error: null };
 }
