@@ -27,12 +27,12 @@ let plugin: SocialLoginPlugin | null = null;
 let ready: Promise<void> | null = null;
 
 function social(): SocialLoginPlugin {
-  plugin ??= registerPlugin<SocialLoginPlugin>("SocialLogin");
-  ready ??= plugin.initialize({
+  const p: SocialLoginPlugin = (plugin ??= registerPlugin<SocialLoginPlugin>("SocialLogin"));
+  ready ??= p.initialize({
     google: { webClientId: WEB_CLIENT_ID, iOSClientId: IOS_CLIENT_ID, iOSServerClientId: WEB_CLIENT_ID, mode: "online" },
     apple: {}, // no iOS usa o identificador da app automaticamente
   });
-  return plugin;
+  return p;
 }
 
 const hex = (b: ArrayBuffer | Uint8Array) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");

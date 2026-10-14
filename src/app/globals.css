@@ -121,6 +121,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
+  /* Sem o "elástico" do iOS ao chegar ao fim da página: na app (WKWebView) arrastava a barra de baixo. */
+  overscroll-behavior: none;
 }
 
 input,
