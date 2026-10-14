@@ -17,7 +17,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.zamoriane.takingcare
       vars:
-        APP_STORE_APPLE_ID: "0000000000" # substituir pelo Apple ID numérico da app no App Store Connect
+        APP_STORE_APPLE_ID: "6822895921" # Apple ID da app no App Store Connect
         MARKETING_VERSION: "1.0.0"
       node: 22
       xcode: latest
