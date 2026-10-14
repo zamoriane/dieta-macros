@@ -28,17 +28,20 @@ pb "Add :CFBundleURLTypes:0 dict"
 pb "Add :CFBundleURLTypes:0:CFBundleURLSchemes array"
 pb "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $GOOGLE_IOS_SCHEME"
 
-# AppDelegate: entregar à Google o regresso do login (protegido por canImport para não partir a compilação)
+# AppDelegate: o template do Capacitor 8 usa SceneDelegate e o GoogleSignIn (iOS 13+) usa
+# ASWebAuthenticationSession, que não precisa do regresso por URL. Só se aplica a templates antigos.
 python3 - <<'PY'
 p = "ios/App/App/AppDelegate.swift"
 s = open(p).read()
-if "GIDSignIn" not in s:
+old = "return ApplicationDelegateProxy.shared.application(app, open: url, options: options)"
+if "GIDSignIn" not in s and old in s:
     s = s.replace("import Capacitor", "import Capacitor\n#if canImport(GoogleSignIn)\nimport GoogleSignIn\n#endif", 1)
-    old = "return ApplicationDelegateProxy.shared.application(app, open: url, options: options)"
     new = "#if canImport(GoogleSignIn)\n        if GIDSignIn.sharedInstance.handle(url) { return true }\n        #endif\n        " + old
-    assert old in s, "AppDelegate inesperado"
     s = s.replace(old, new, 1)
     open(p, "w").write(s)
+    print("AppDelegate: GoogleSignIn ligado")
+else:
+    print("AppDelegate: sem alterações (template com SceneDelegate)")
 PY
 
 # Capacidades HealthKit e Sign in with Apple (ambas ativas no identificador da app no portal Apple)
