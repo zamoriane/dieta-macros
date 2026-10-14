@@ -2,6 +2,7 @@ import { after, NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { catalogState, syncExercises } from "@/lib/exercisesSync";
 import { searchGroups } from "@/lib/wger";
+import { getT } from "@/lib/i18n/server";
 
 export const maxDuration = 60;
 
@@ -10,16 +11,17 @@ const COLS = "id, nome, nome_pt, nome_en, categoria, musculos, equipamento, imag
 // Pesquisa no catálogo local (cópia da wger). Na primeira utilização, ou se tiver mais de 30 dias,
 // o catálogo é (re)descarregado da wger.
 export async function GET(req: NextRequest) {
+  const { t } = await getT();
   const sb = await createClient();
   const { data: auth } = await sb.auth.getUser();
-  if (!auth.user) return NextResponse.json({ error: "Sessão inválida" }, { status: 401 });
+  if (!auth.user) return NextResponse.json({ error: t("dberr.sessaoInvalida") }, { status: 401 });
 
   const state = await catalogState();
   if (state === "vazio") {
     try {
       await syncExercises();
     } catch (e) {
-      return NextResponse.json({ exercises: [], error: `Não foi possível carregar os exercícios da wger: ${e instanceof Error ? e.message : e}` }, { status: 502 });
+      return NextResponse.json({ exercises: [], error: `${t("ex.err.catalogo")}: ${e instanceof Error ? e.message : e}` }, { status: 502 });
     }
   } else if (state === "antigo") {
     after(() => syncExercises().catch(() => undefined));

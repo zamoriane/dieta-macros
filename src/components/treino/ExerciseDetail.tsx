@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
 import { getExercise, type Exercise } from "@/lib/workouts";
-import { BODY_BACK, BODY_FRONT, exerciseUrl } from "@/lib/wger";
+import { BODY_BACK, BODY_FRONT, catLabel, equipLabel, exName, exerciseUrl, muscleLabel } from "@/lib/wger";
+import { useI18n } from "@/lib/i18n/client";
 import { Skeleton } from "@/components/ui/Primitives";
 
 /** Silhueta frente/costas da wger com os músculos trabalhados sobrepostos (principais a vermelho, secundários a laranja). */
 export function MuscleMap({ exercise }: { exercise: Exercise }) {
+  const { t, locale } = useI18n();
   const ms = exercise.musculos ?? [];
   if (!ms.some((m) => m.img)) return null;
   const side = (front: boolean) => (
@@ -30,13 +32,13 @@ export function MuscleMap({ exercise }: { exercise: Exercise }) {
         {ms.filter((m) => !m.sec).length > 0 && (
           <span>
             <span className="mr-1 inline-block h-2 w-2 rounded-full bg-[#d33]" aria-hidden="true" />
-            Principais: {ms.filter((m) => !m.sec).map((m) => m.nome).join(", ")}
+            {t("ex.principais")}: {ms.filter((m) => !m.sec).map((m) => muscleLabel(m, locale)).join(", ")}
           </span>
         )}
         {ms.some((m) => m.sec) && (
           <span>
             <span className="mr-1 inline-block h-2 w-2 rounded-full bg-[#f59e0b]" aria-hidden="true" />
-            Secundários: {ms.filter((m) => m.sec).map((m) => m.nome).join(", ")}
+            {t("ex.secundarios")}: {ms.filter((m) => m.sec).map((m) => muscleLabel(m, locale)).join(", ")}
           </span>
         )}
       </figcaption>
@@ -46,6 +48,7 @@ export function MuscleMap({ exercise }: { exercise: Exercise }) {
 
 /** Ficha do exercício: imagem, músculos, equipamento, instruções e atribuição (CC BY-SA). */
 export function ExerciseDetail({ exerciseId, initial }: { exerciseId: number; initial?: Exercise | null }) {
+  const { t, locale } = useI18n();
   const [ex, setEx] = useState<Exercise | null>(initial && initial.descricao !== undefined ? initial : null);
   const [loading, setLoading] = useState(!ex);
 
@@ -65,44 +68,44 @@ export function ExerciseDetail({ exerciseId, initial }: { exerciseId: number; in
 
   if (loading && !initial) return <Skeleton className="h-64" />;
   const e = ex ?? initial;
-  if (!e) return <p className="text-sm text-muted">Exercício não encontrado.</p>;
+  if (!e) return <p className="text-sm text-muted">{t("ex.naoEncontrado")}</p>;
 
   return (
     <div className="space-y-4">
       {e.imagem && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={e.imagem} alt={e.nome} className="mx-auto max-h-64 w-auto rounded-xl bg-white object-contain" loading="lazy" />
+        <img src={e.imagem} alt={exName(e, locale)} className="mx-auto max-h-64 w-auto rounded-xl bg-white object-contain" loading="lazy" />
       )}
       <div className="flex flex-wrap gap-1.5 text-xs">
-        {e.categoria && <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent">{e.categoria}</span>}
+        {e.categoria && <span className="rounded-full bg-accent-soft px-2.5 py-1 font-medium text-accent">{catLabel(e.categoria, locale)}</span>}
         {e.equipamento.map((q) => (
           <span key={q} className="rounded-full bg-card-2 px-2.5 py-1 text-muted">
-            {q}
+            {equipLabel(q, locale)}
           </span>
         ))}
       </div>
-      {e.nome_pt && e.nome_en && <p className="text-xs text-muted">Em inglês: {e.nome_en}</p>}
+      {locale === "pt" && e.nome_pt && e.nome_en && <p className="text-xs text-muted">{t("ex.emIngles", { nome: e.nome_en })}</p>}
       <MuscleMap exercise={e} />
       {loading ? (
         <Skeleton className="h-20" />
       ) : e.descricao ? (
         <div>
-          <h3 className="mb-1 text-sm font-semibold">Como fazer{!e.nome_pt ? " (em inglês)" : ""}</h3>
+          <h3 className="mb-1 text-sm font-semibold">{t("ex.comoFazer")}{locale === "pt" && !e.nome_pt ? t("ex.emInglesSufixo") : locale === "en" && e.nome_pt ? t("ex.emPortuguesSufixo") : ""}</h3>
           <p className="whitespace-pre-line text-sm leading-relaxed">{e.descricao}</p>
         </div>
       ) : (
-        <p className="text-sm text-muted">Sem instruções na base de dados para este exercício.</p>
+        <p className="text-sm text-muted">{t("ex.semInstrucoes")}</p>
       )}
       <p className="border-t border-line pt-3 text-[11px] leading-snug text-muted">
-        Exercício da{" "}
+        {t("ex.daWger")}{" "}
         <a href={exerciseUrl(e.id)} target="_blank" rel="noopener noreferrer" className="underline">
           wger.de
         </a>
-        {e.autor ? ` · autoria: ${e.autor}` : ""} ·{" "}
+        {e.autor ? ` · ${t("ex.autoria", { autor: e.autor })}` : ""} ·{" "}
         <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.pt" target="_blank" rel="noopener noreferrer" className="underline">
           {e.licenca ?? "CC-BY-SA 3"}
         </a>
-        . Nomes de músculos e equipamento traduzidos.
+        {locale === "pt" ? t("ex.traduzidos") : "."}
       </p>
     </div>
   );

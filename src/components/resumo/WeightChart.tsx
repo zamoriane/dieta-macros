@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ema } from "@/lib/nutrition";
 import { addDays, isoDay } from "@/lib/data";
 import { useWidth } from "./useWidth";
+import { useI18n } from "@/lib/i18n/client";
 
 type W = { dia: string; kg: number };
 const RANGES = [7, 30, 90] as const;
@@ -11,8 +12,7 @@ const PAD = { top: 14, right: 12, bottom: 28, left: 44 };
 const MIN_TREND = 7;
 
 const t = (d: string) => new Date(d + "T12:00:00").getTime();
-const dm = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" });
-const kg = (v: number) => v.toLocaleString("pt-PT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
 
 /**
  * Evolução do peso: pesagens registadas (pontos) e, com ≥ 7 pesagens, a tendência
@@ -20,6 +20,9 @@ const kg = (v: number) => v.toLocaleString("pt-PT", { minimumFractionDigits: 1, 
  * Períodos sem pesagens ficam vazios — nada é inventado.
  */
 export function WeightChart({ weights, goal }: { weights: W[]; goal: number | null }) {
+  const { t: tr, df, locale } = useI18n();
+  const dm = (d: string) => df(d, { day: "numeric", month: "short" });
+  const kg = (v: number) => v.toLocaleString(locale === "en" ? "en-GB" : "pt-PT", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const [range, setRange] = useState<(typeof RANGES)[number]>(30);
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
@@ -32,8 +35,8 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
 
   const header = (
     <div className="flex items-center justify-between gap-2">
-      <h2 className="text-sm font-semibold">Evolução do peso</h2>
-      <div className="flex rounded-lg border border-line bg-card-2 p-0.5 text-xs" role="group" aria-label="Período do gráfico de peso">
+      <h2 className="text-sm font-semibold">{tr("graf.peso")}</h2>
+      <div className="flex rounded-lg border border-line bg-card-2 p-0.5 text-xs" role="group" aria-label={tr("graf.pesoPeriodo")}>
         {RANGES.map((r) => (
           <button
             key={r}
@@ -41,7 +44,7 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
             aria-pressed={range === r}
             className={`min-h-8 rounded-md px-2.5 font-medium ${range === r ? "bg-card text-ink shadow-sm" : "text-muted"}`}
           >
-            {r} dias
+            {tr("graf.nDias", { n: r })}
           </button>
         ))}
       </div>
@@ -52,7 +55,7 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
     return (
       <section className="card space-y-3 p-4 sm:p-5">
         {header}
-        <p className="py-8 text-center text-sm text-muted">Sem pesagens neste período. Registe o peso no Perfil, idealmente de manhã.</p>
+        <p className="py-8 text-center text-sm text-muted">{tr("graf.semPesagens")}</p>
       </section>
     );
   }
@@ -96,14 +99,14 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
       {header}
 
       <dl className="tabular grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat k="Última pesagem" v={`${kg(last.kg)} kg`} sub={dm(last.dia)} />
-        <Stat k="Variação no período" v={idx.length > 1 ? `${delta > 0 ? "+" : ""}${kg(delta)} kg` : "–"} sub={idx.length > 1 ? `${idx.length} pesagens` : "1 pesagem"} />
-        <Stat k="Ritmo (tendência)" v={perWeek != null ? `${perWeek > 0 ? "+" : ""}${kg(perWeek)} kg/sem` : "–"} sub={perWeek == null ? `precisa de ${MIN_TREND}+ pesagens` : "estimado"} />
-        <Stat k="Até à meta" v={toGoal != null ? `${kg(Math.max(0, toGoal))} kg` : "–"} sub={goal != null ? `meta ${kg(goal)} kg` : "defina no Perfil"} />
+        <Stat k={tr("graf.ultima")} v={`${kg(last.kg)} kg`} sub={dm(last.dia)} />
+        <Stat k={tr("graf.variacao")} v={idx.length > 1 ? `${delta > 0 ? "+" : ""}${kg(delta)} kg` : "–"} sub={idx.length > 1 ? tr("graf.nPesagens", { n: idx.length }) : tr("graf.umaPesagem")} />
+        <Stat k={tr("graf.ritmo")} v={perWeek != null ? `${perWeek > 0 ? "+" : ""}${kg(perWeek)} ${tr("graf.kgSem")}` : "–"} sub={perWeek == null ? tr("graf.precisa", { n: MIN_TREND }) : tr("graf.estimado")} />
+        <Stat k={tr("graf.ateMeta")} v={toGoal != null ? `${kg(Math.max(0, toGoal))} kg` : "–"} sub={goal != null ? tr("graf.metaKg", { kg: kg(goal) }) : tr("graf.definaPerfil")} />
       </dl>
 
       <div ref={ref} className="relative">
-        <svg width={width} height={H} role="img" aria-label="Gráfico de evolução do peso" onMouseLeave={() => setHover(null)}>
+        <svg width={width} height={H} role="img" aria-label={tr("graf.pesoAria")} onMouseLeave={() => setHover(null)}>
           {ticks.map((v) => (
             <g key={v}>
               <line x1={PAD.left} x2={width - PAD.right} y1={y(v)} y2={y(v)} stroke="var(--line)" />
@@ -155,12 +158,12 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
           >
             <div className="mb-1 font-semibold">{dm(h.dia)}</div>
             <div className="tabular flex justify-between gap-4">
-              <span className="text-muted">Pesagem</span>
+              <span className="text-muted">{tr("graf.pesagem")}</span>
               <span className="font-medium">{kg(h.kg)} kg</span>
             </div>
             {h.trend != null && (
               <div className="tabular flex justify-between gap-4">
-                <span className="text-muted">Tendência</span>
+                <span className="text-muted">{tr("graf.tendencia")}</span>
                 <span className="font-medium">{kg(h.trend)} kg</span>
               </div>
             )}
@@ -170,18 +173,18 @@ export function WeightChart({ weights, goal }: { weights: W[]; goal: number | nu
 
       <div className="flex flex-wrap gap-4 text-xs text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-chart-2" /> Pesagem
+          <span className="h-2.5 w-2.5 rounded-full bg-chart-2" /> {tr("graf.pesagem")}
         </span>
         {trendPath ? (
           <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 rounded bg-chart-1" /> Tendência suavizada
+            <span className="h-0.5 w-4 rounded bg-chart-1" /> {tr("graf.tendenciaSuave")}
           </span>
         ) : (
-          <span>Tendência aparece a partir de {MIN_TREND} pesagens</span>
+          <span>{tr("graf.tendenciaApartir", { n: MIN_TREND })}</span>
         )}
         {goalInView && (
           <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t border-dashed border-muted" /> Peso meta
+            <span className="w-4 border-t border-dashed border-muted" /> {tr("graf.pesoMeta")}
           </span>
         )}
       </div>

@@ -1,6 +1,25 @@
-export const metadata = { title: "Termos · Taking care of yourself" };
+import { serverLocale } from "@/lib/i18n/server";
 
-export default function Termos() {
+export async function generateMetadata() {
+  const l = await serverLocale();
+  return { title: `${l === "en" ? "Terms" : "Termos"} · Taking care of yourself` };
+}
+
+export default async function Termos() {
+  const l = await serverLocale();
+  if (l === "en") {
+    return (
+      <article className="space-y-3 text-sm leading-relaxed">
+        <h1 className="text-xl font-semibold">Terms of use</h1>
+        <p>Taking care of yourself is a personal tool for tracking food and activity, provided as is.</p>
+        <p>
+          Calorie, macronutrient, energy expenditure and deficit figures are estimates based on food databases, published formulas and device data,
+          and do not replace advice from a doctor or nutritionist.
+        </p>
+        <p>Users are responsible for the data they log and for connecting external services such as Oura.</p>
+      </article>
+    );
+  }
   return (
     <article className="space-y-3 text-sm leading-relaxed">
       <h1 className="text-xl font-semibold">Termos de utilização</h1>

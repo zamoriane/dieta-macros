@@ -9,6 +9,7 @@ import { myLinks, type Link as TLink } from "@/lib/links";
 import { EmptyState, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
+import { useI18n } from "@/lib/i18n/client";
 import { PlanEditor } from "@/components/plano/PlanEditor";
 import { WorkoutEditor } from "@/components/treino/WorkoutEditor";
 import { WeightChart } from "@/components/resumo/WeightChart";
@@ -17,6 +18,7 @@ import { CalorieChart, type CalDay } from "@/components/resumo/CalorieChart";
 type Tab = "plano" | "treino" | "progresso";
 
 export default function ClientePage() {
+  const { t } = useI18n();
   const { id } = useParams<{ id: string }>();
   const sb = useMemo(() => createClient(), []);
   const [viewer, setViewer] = useState<string | null>(null);
@@ -72,17 +74,17 @@ export default function ClientePage() {
   if (!link) {
     return (
       <div className="mx-auto max-w-xl pt-6">
-        <EmptyState icon="alert" title="Sem acesso a este cliente">
-          A ligação não existe ou foi terminada.{" "}
+        <EmptyState icon="alert" title={t("cli.semAcesso")}>
+          {t("cli.semAcessoDica")}{" "}
           <Link href="/clientes" className="font-medium text-accent">
-            Voltar aos clientes
+            {t("cli.voltar")}
           </Link>
         </EmptyState>
       </div>
     );
   }
 
-  const name = link.outra_nome ?? link.outra_email ?? "Cliente";
+  const name = link.outra_nome ?? link.outra_email ?? t("cli.cliente");
   const logged = days.filter((d) => d.kcal != null);
   const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + (d.kcal ?? 0), 0) / logged.length) : null;
   const deficitSum = logged.reduce((s, d) => s + (d.deficit ?? 0), 0);
@@ -91,7 +93,7 @@ export default function ClientePage() {
     <div className="space-y-5">
       <div>
         <Link href="/clientes" className="inline-flex items-center gap-1 text-sm text-muted hover:text-ink">
-          <Icon name="chevronLeft" size={16} /> Clientes
+          <Icon name="chevronLeft" size={16} /> {t("nav.clientes")}
         </Link>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
@@ -102,9 +104,9 @@ export default function ClientePage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            {link.perm_dieta && <StatusBadge tone="accent">Plano alimentar</StatusBadge>}
-            {link.perm_treino && <StatusBadge tone="accent">Treino</StatusBadge>}
-            {link.perm_progresso && <StatusBadge tone="accent">Progresso</StatusBadge>}
+            {link.perm_dieta && <StatusBadge tone="accent">{t("cli.planoAlimentar")}</StatusBadge>}
+            {link.perm_treino && <StatusBadge tone="accent">{t("nav.treino")}</StatusBadge>}
+            {link.perm_progresso && <StatusBadge tone="accent">{t("cli.progresso")}</StatusBadge>}
           </div>
         </div>
       </div>
@@ -112,40 +114,40 @@ export default function ClientePage() {
       <div className="flex rounded-xl border border-line bg-card p-1 text-sm sm:w-fit" role="tablist">
         {link.perm_dieta && (
           <button role="tab" aria-selected={tab === "plano"} onClick={() => setTab("plano")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "plano" ? "bg-accent text-on-accent" : "text-muted"}`}>
-            Plano alimentar
+            {t("cli.planoAlimentar")}
           </button>
         )}
         {link.perm_treino && (
           <button role="tab" aria-selected={tab === "treino"} onClick={() => setTab("treino")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "treino" ? "bg-accent text-on-accent" : "text-muted"}`}>
-            Treino
+            {t("nav.treino")}
           </button>
         )}
         {link.perm_progresso && (
           <button role="tab" aria-selected={tab === "progresso"} onClick={() => setTab("progresso")} className={`min-h-9 flex-1 whitespace-nowrap rounded-lg px-4 font-medium ${tab === "progresso" ? "bg-accent text-on-accent" : "text-muted"}`}>
-            Progresso
+            {t("cli.progresso")}
           </button>
         )}
       </div>
 
       {tab === "plano" && link.perm_dieta && viewer && (
         <>
-          {!link.perm_progresso && <p className="text-xs text-muted">Sem acesso ao progresso do cliente, por isso as metas do dia não são mostradas.</p>}
-          <PlanEditor ownerId={id} viewerId={viewer} targets={targets} names={{ [id]: `${name} (cliente)` }} />
+          {!link.perm_progresso && <p className="text-xs text-muted">{t("cli.semProgresso")}</p>}
+          <PlanEditor ownerId={id} viewerId={viewer} targets={targets} names={{ [id]: t("links.nomeCliente", { nome: name }) }} />
         </>
       )}
 
-      {tab === "treino" && link.perm_treino && viewer && <WorkoutEditor ownerId={id} viewerId={viewer} names={{ [id]: `${name} (cliente)` }} />}
+      {tab === "treino" && link.perm_treino && viewer && <WorkoutEditor ownerId={id} viewerId={viewer} names={{ [id]: t("links.nomeCliente", { nome: name }) }} />}
 
       {tab === "progresso" && link.perm_progresso && (
         <div className="space-y-5">
           <section className="tabular grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Mini label="Média ingerida (14 dias)" value={avgKcal != null ? `${avgKcal} kcal` : "–"} />
-            <Mini label="Meta de ingestão hoje" value={targets ? `${targets.kcal} kcal` : "–"} />
-            <Mini label="Défice acumulado (estim.)" value={logged.length ? `${deficitSum} kcal` : "–"} />
-            <Mini label="Dias com registo" value={`${logged.length}/14`} />
+            <Mini label={t("cli.mediaIngerida")} value={avgKcal != null ? `${avgKcal} kcal` : "–"} />
+            <Mini label={t("cli.metaHoje")} value={targets ? `${targets.kcal} kcal` : "–"} />
+            <Mini label={t("cli.deficeAcumulado")} value={logged.length ? `${deficitSum} kcal` : "–"} />
+            <Mini label={t("cli.diasRegisto")} value={`${logged.length}/14`} />
           </section>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            <SectionCard title="Calorias: ingerido vs gasto (14 dias)">
+            <SectionCard title={t("cli.grafCalorias")}>
               {days.length ? <CalorieChart days={days} weekly={false} /> : <Skeleton className="h-56" />}
             </SectionCard>
             <WeightChart weights={weights} goal={profile?.peso_meta_kg && Number(profile.peso_meta_kg) >= 40 ? Number(profile.peso_meta_kg) : null} />

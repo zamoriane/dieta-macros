@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { addDays, isoDay } from "@/lib/data";
 import { getLogs, getWorkout, lastSessions, setsSummary, type Params, type WorkoutDay, type WorkoutExercise, type WorkoutLog } from "@/lib/workouts";
-import { prescription, WEEKDAYS } from "@/lib/wger";
+import { exName, prescription } from "@/lib/wger";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/core";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { EmptyState, FormField, SectionCard, Skeleton } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -19,6 +21,7 @@ type DayForm = { mode: "new" | "edit"; day?: WorkoutDay; nome: string; dias: num
  * a editar o plano de um cliente (/clientes/[id]); `ownerId` é sempre o dono do plano.
  */
 export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: string; viewerId: string; names?: Record<string, string> }) {
+  const { t, df, tp, weekday, locale } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [days, setDays] = useState<WorkoutDay[]>([]);
   const [exs, setExs] = useState<WorkoutExercise[]>([]);
@@ -44,7 +47,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
       setLogs(l);
       setChanges((ch ?? []) as Change[]);
     } catch (e) {
-      toast(`Não foi possível carregar o treino: ${(e as Error).message}`, { kind: "erro" });
+      toast(`${t("treino.erroCarregar")}: ${(e as Error).message}`, { kind: "erro" });
     }
     setLoaded(true);
   }, [sb, ownerId]);
@@ -54,7 +57,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
   }, [load]);
 
   const last = useMemo(() => lastSessions(logs), [logs]);
-  const who = (id: string | null) => (!id ? "sistema" : id === viewerId ? "você" : names[id] ?? "outra pessoa");
+  const who = (id: string | null) => (!id ? t("comum.sistema") : id === viewerId ? t("comum.porVoce") : names[id] ?? t("comum.outraPessoa"));
 
   async function saveDay() {
     if (!dayForm || !dayForm.nome.trim()) return;
@@ -66,7 +69,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
     if (error) return toast(error.message, { kind: "erro" });
     setDayForm(null);
     await load();
-    toast(dayForm.mode === "new" ? "Treino criado" : "Treino atualizado");
+    toast(dayForm.mode === "new" ? t("treino.criado") : t("treino.atualizado"));
   }
 
   async function confirmDeleteDay() {
@@ -75,7 +78,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
     if (error) return toast(error.message, { kind: "erro" });
     setDeleteDay(null);
     await load();
-    toast(`"${deleteDay.nome}" apagado`);
+    toast(t("treino.apagado", { nome: deleteDay.nome }));
   }
 
   async function moveDay(d: WorkoutDay, dir: -1 | 1) {
@@ -107,16 +110,16 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
     if (error) return toast(error.message, { kind: "erro" });
     setEdit(null);
     await load();
-    toast("Exercício atualizado");
+    toast(t("treino.exAtualizado"));
   }
 
   async function removeEx(x: WorkoutExercise) {
     const { error } = await sb.from("workout_exercises").delete().eq("id", x.id);
     if (error) return toast(error.message, { kind: "erro" });
     await load();
-    toast(`${x.nome} removido`, {
+    toast(t("hoje.removido", { nome: x.nome }), {
       action: {
-        label: "Desfazer",
+        label: t("comum.desfazer"),
         run: async () => {
           const { id: _id, ...rest } = x;
           await sb.from("workout_exercises").insert({ ...rest, user_id: ownerId });
@@ -130,19 +133,19 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
       <div className="min-w-0 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Treinos</h2>
-          <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => setDayForm({ mode: "new", nome: `Treino ${String.fromCharCode(65 + days.length)}`, dias: [], notas: "" })}>
-            <Icon name="plus" size={18} /> Treino
+          <h2 className="text-lg font-semibold">{t("treino.treinos")}</h2>
+          <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => setDayForm({ mode: "new", nome: t("treino.nomePadrao", { letra: String.fromCharCode(65 + days.length) }), dias: [], notas: "" })}>
+            <Icon name="plus" size={18} /> {t("nav.treino")}
           </button>
         </div>
 
         {!loaded && [0, 1].map((i) => <Skeleton key={i} className="h-32" />)}
 
         {loaded && days.length === 0 && (
-          <EmptyState icon="dumbbell" title="Sem plano de treino">
-            Crie um treino (ex.: Treino A — peito e tríceps), escolha os dias da semana e adicione exercícios.
-            <button className="btn btn-primary mt-3" onClick={() => setDayForm({ mode: "new", nome: "Treino A", dias: [], notas: "" })}>
-              <Icon name="plus" size={18} /> Criar primeiro treino
+          <EmptyState icon="dumbbell" title={t("treino.semPlano")}>
+            {t("treino.semPlanoDica")}
+            <button className="btn btn-primary mt-3" onClick={() => setDayForm({ mode: "new", nome: t("treino.nomePadrao", { letra: "A" }), dias: [], notas: "" })}>
+              <Icon name="plus" size={18} /> {t("treino.criarPrimeiro")}
             </button>
           </EmptyState>
         )}
@@ -155,10 +158,10 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold leading-snug">{d.nome}</h3>
                   <p className="text-xs text-muted">
-                    {d.dias_semana.length ? d.dias_semana.map((n) => WEEKDAYS[n]).join(" · ") : "Sem dia fixo"} · {list.length} exercício{list.length === 1 ? "" : "s"}
+                    {d.dias_semana.length ? d.dias_semana.map((n) => weekday(n)).join(" · ") : t("treino.semDia")} · {tp("treino.nExercicios", list.length)}
                   </p>
                 </div>
-                <button className="icon-btn" disabled={i === 0} style={i === 0 ? { opacity: 0.3 } : undefined} onClick={() => moveDay(d, -1)} aria-label={`Subir ${d.nome}`}>
+                <button className="icon-btn" disabled={i === 0} style={i === 0 ? { opacity: 0.3 } : undefined} onClick={() => moveDay(d, -1)} aria-label={t("comum.subir", { nome: d.nome })}>
                   <Icon name="chevronDown" size={18} className="rotate-180" />
                 </button>
                 <button
@@ -166,18 +169,18 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                   disabled={i === days.length - 1}
                   style={i === days.length - 1 ? { opacity: 0.3 } : undefined}
                   onClick={() => moveDay(d, 1)}
-                  aria-label={`Descer ${d.nome}`}
+                  aria-label={t("comum.descer", { nome: d.nome })}
                 >
                   <Icon name="chevronDown" size={18} />
                 </button>
                 <button
                   className="icon-btn"
                   onClick={() => setDayForm({ mode: "edit", day: d, nome: d.nome, dias: d.dias_semana, notas: d.notas ?? "" })}
-                  aria-label={`Editar ${d.nome}`}
+                  aria-label={t("comum.editarX", { nome: d.nome })}
                 >
                   <Icon name="edit" size={18} />
                 </button>
-                <button className="icon-btn hover:!text-bad" onClick={() => setDeleteDay(d)} aria-label={`Apagar ${d.nome}`}>
+                <button className="icon-btn hover:!text-bad" onClick={() => setDeleteDay(d)} aria-label={t("comum.apagarX", { nome: d.nome })}>
                   <Icon name="trash" size={18} />
                 </button>
               </div>
@@ -187,25 +190,25 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                   const ls = last.get(x.id);
                   return (
                     <li key={x.id} className="flex items-center gap-2 py-2 pl-3 pr-1">
-                      <button className="shrink-0" onClick={() => x.exercise_id && setInfo(x)} aria-label={`Ver ficha de ${x.nome}`} disabled={!x.exercise_id}>
+                      <button className="shrink-0" onClick={() => x.exercise_id && setInfo(x)} aria-label={t("treino.verFicha", { nome: x.nome })} disabled={!x.exercise_id}>
                         <Thumb src={x.imagem} size={44} />
                       </button>
                       <button
                         className="min-w-0 flex-1 py-1 text-left"
                         onClick={() => setEdit({ ex: x, p: { series: x.series, reps: x.reps, carga_kg: x.carga_kg, descanso_s: x.descanso_s, notas: x.notas } })}
-                        aria-label={`Editar ${x.nome}`}
+                        aria-label={t("comum.editarX", { nome: x.nome })}
                       >
                         <span className="block text-sm font-medium leading-snug">{x.nome}</span>
-                        <span className="tabular block text-xs text-muted">{prescription(x) || "Sem prescrição"}</span>
+                        <span className="tabular block text-xs text-muted">{prescription(x) || t("treino.semPrescricao")}</span>
                         {ls && (
                           <span className="tabular block text-[11px] text-muted">
-                            Última vez ({new Date(ls.dia + "T12:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" })}): {setsSummary(ls.sets)}
+                            {t("treino.ultimaVezEm", { data: df(ls.dia, { day: "numeric", month: "short" }), s: setsSummary(ls.sets) })}
                           </span>
                         )}
                         {x.notas && <span className="block truncate text-[11px] italic text-muted">{x.notas}</span>}
                       </button>
                       <div className="flex shrink-0 flex-col">
-                        <button className="icon-btn !h-8 !min-h-0" disabled={j === 0} style={j === 0 ? { opacity: 0.3 } : undefined} onClick={() => moveEx(x, -1)} aria-label={`Subir ${x.nome}`}>
+                        <button className="icon-btn !h-8 !min-h-0" disabled={j === 0} style={j === 0 ? { opacity: 0.3 } : undefined} onClick={() => moveEx(x, -1)} aria-label={t("comum.subir", { nome: x.nome })}>
                           <Icon name="chevronDown" size={16} className="rotate-180" />
                         </button>
                         <button
@@ -213,12 +216,12 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                           disabled={j === list.length - 1}
                           style={j === list.length - 1 ? { opacity: 0.3 } : undefined}
                           onClick={() => moveEx(x, 1)}
-                          aria-label={`Descer ${x.nome}`}
+                          aria-label={t("comum.descer", { nome: x.nome })}
                         >
                           <Icon name="chevronDown" size={16} />
                         </button>
                       </div>
-                      <button className="icon-btn shrink-0 hover:!text-bad" onClick={() => removeEx(x)} aria-label={`Remover ${x.nome}`}>
+                      <button className="icon-btn shrink-0 hover:!text-bad" onClick={() => removeEx(x)} aria-label={t("comum.removerX", { nome: x.nome })}>
                         <Icon name="trash" size={18} />
                       </button>
                     </li>
@@ -226,7 +229,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                 })}
                 <li>
                   <button className="flex min-h-12 w-full items-center gap-2 px-4 text-sm font-medium text-accent hover:bg-card-2/60" onClick={() => setPicker(d)}>
-                    <Icon name="plus" size={18} /> Adicionar exercício
+                    <Icon name="plus" size={18} /> {t("treino.adicionarEx")}
                   </button>
                 </li>
               </ul>
@@ -236,7 +239,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
       </div>
 
       <div className="min-w-0 space-y-5 lg:sticky lg:top-24">
-        <SectionCard title="Histórico de alterações">
+        <SectionCard title={t("hist.titulo")}>
           {changes.length ? (
             <ul className="space-y-2.5 text-sm">
               {changes.slice(0, 12).map((c) => (
@@ -247,38 +250,38 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block">
-                      <span className="capitalize">{c.acao}</span> {c.resumo}
+                      <span>{t(`hist.${c.acao}` as MessageKey)}</span> {c.resumo}
                     </span>
                     <span className="text-xs text-muted">
-                      por {who(c.actor_id)} · {new Date(c.em).toLocaleString("pt-PT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {t("hist.por", { quem: who(c.actor_id) })} · {df(new Date(c.em), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted">As alterações ao plano de treino ficam registadas aqui, com quem as fez.</p>
+            <p className="text-sm text-muted">{t("treino.histVazio")}</p>
           )}
         </SectionCard>
       </div>
 
       {picker && (
         <ExercisePicker
-          title={`Adicionar a ${picker.nome}`}
+          title={t("hoje.adicionarA", { nome: picker.nome })}
           onClose={() => setPicker(null)}
           onPick={async (ex, p) => {
             const { error } = await sb.from("workout_exercises").insert({
               user_id: ownerId,
               workout_day_id: picker.id,
               exercise_id: ex.id,
-              nome: ex.nome,
+              nome: ex.id == null ? ex.nome : exName(ex, locale),
               imagem: ex.imagem_thumb,
               ...p,
               posicao: exs.filter((e) => e.workout_day_id === picker.id).length,
             });
             if (error) return void toast(error.message, { kind: "erro" });
             await load();
-            toast(`${ex.nome} adicionado a ${picker.nome}`);
+            toast(t("hoje.adicionadoA", { alimento: ex.id == null ? ex.nome : exName(ex, locale), nome: picker.nome }));
           }}
         />
       )}
@@ -290,10 +293,10 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setEdit(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!edit || !!paramsError(edit.p)} onClick={saveEdit}>
-              Guardar
+              {t("comum.guardar")}
             </button>
           </>
         }
@@ -301,7 +304,7 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
         {edit && (
           <div className="space-y-3">
             <ParamsFields value={edit.p} onChange={(p) => setEdit({ ...edit, p })} />
-            {paramsError(edit.p) && <p className="text-xs text-bad">{paramsError(edit.p)}</p>}
+            {paramsError(edit.p) && <p className="text-xs text-bad">{t(paramsError(edit.p)!)}</p>}
           </div>
         )}
       </ResponsiveDialog>
@@ -312,28 +315,29 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
 
       <ResponsiveDialog
         open={!!dayForm}
-        title={dayForm?.mode === "edit" ? "Editar treino" : "Novo treino"}
+        title={dayForm?.mode === "edit" ? t("treino.editar") : t("treino.novo")}
         onClose={() => setDayForm(null)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setDayForm(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!dayForm?.nome.trim()} onClick={saveDay}>
-              Guardar
+              {t("comum.guardar")}
             </button>
           </>
         }
       >
         {dayForm && (
           <div className="space-y-4">
-            <FormField label="Nome" hint="Ex.: Treino A — Peito e tríceps">
+            <FormField label={t("comum.nome")} hint={t("treino.nomeDica")}>
               <input data-autofocus className="w-full" value={dayForm.nome} maxLength={60} onChange={(e) => setDayForm({ ...dayForm, nome: e.target.value })} />
             </FormField>
             <fieldset>
-              <legend className="mb-1.5 text-sm font-medium">Dias da semana</legend>
+              <legend className="mb-1.5 text-sm font-medium">{t("treino.diasSemana")}</legend>
               <div className="grid grid-cols-7 gap-1">
-                {WEEKDAYS.map((w, n) => {
+                {[0, 1, 2, 3, 4, 5, 6].map((n) => {
+                  const w = weekday(n);
                   const on = dayForm.dias.includes(n);
                   return (
                     <button
@@ -348,9 +352,9 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
                   );
                 })}
               </div>
-              <p className="mt-1 text-xs text-muted">Usado para sugerir o treino do dia. Pode deixar vazio.</p>
+              <p className="mt-1 text-xs text-muted">{t("treino.diasDica")}</p>
             </fieldset>
-            <FormField label="Notas" hint="Aquecimento, objetivo do treino…">
+            <FormField label={t("comum.notas")} hint={t("treino.notasDica")}>
               <textarea className="w-full" rows={2} maxLength={500} value={dayForm.notas} onChange={(e) => setDayForm({ ...dayForm, notas: e.target.value })} />
             </FormField>
           </div>
@@ -359,21 +363,21 @@ export function WorkoutEditor({ ownerId, viewerId, names = {} }: { ownerId: stri
 
       <ResponsiveDialog
         open={!!deleteDay}
-        title="Apagar treino"
+        title={t("treino.apagar")}
         onClose={() => setDeleteDay(null)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setDeleteDay(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn flex-1 bg-bad text-white" onClick={confirmDeleteDay}>
-              Apagar
+              {t("comum.apagar")}
             </button>
           </>
         }
       >
         <p className="text-sm">
-          Apagar <strong>{deleteDay?.nome}</strong> e os exercícios dele? As séries já registadas mantêm-se no histórico.
+          {t("treino.apagarPergunta", { nome: deleteDay?.nome ?? "" })}
         </p>
       </ResponsiveDialog>
     </div>

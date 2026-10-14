@@ -7,9 +7,11 @@ import { myLinks, rpcError, type Link as TLink } from "@/lib/links";
 import { EmptyState, PageHeader, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
+import { useI18n } from "@/lib/i18n/client";
 import { toast } from "@/components/ui/Toast";
 
 export default function ClientesPage() {
+  const { t, df } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [me, setMe] = useState<Profile | null>(null);
   const [links, setLinks] = useState<TLink[]>([]);
@@ -28,18 +30,18 @@ export default function ClientesPage() {
 
   async function respond(l: TLink, accept: boolean) {
     const { error } = await sb.rpc("respond_link", { p_id: l.id, p_accept: accept });
-    if (error) return toast(rpcError(error), { kind: "erro" });
-    toast(accept ? `${l.outra_nome ?? "Cliente"} adicionado aos seus clientes` : "Pedido recusado");
+    if (error) return toast(rpcError(error, t), { kind: "erro" });
+    toast(accept ? t("cli.adicionado", { nome: l.outra_nome ?? t("cli.cliente") }) : t("cli.recusado"));
     load();
   }
 
   if (!loading && me?.pt_estado !== "aprovado") {
     return (
       <div className="mx-auto max-w-xl pt-6">
-        <EmptyState icon="user" title="Área de treinador">
-          Esta área fica disponível quando o seu Perfil Treinador for aprovado. Pode pedir em{" "}
+        <EmptyState icon="user" title={t("cli.areaTreinador")}>
+          {t("cli.areaTreinadorDica")}{" "}
           <Link href="/perfil" className="font-medium text-accent">
-            Perfil
+            {t("nav.perfil")}
           </Link>
           .
         </EmptyState>
@@ -53,11 +55,11 @@ export default function ClientesPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Clientes"
+        title={t("nav.clientes")}
         subtitle={
           me?.trainer_code ? (
             <>
-              O seu código: <code className="rounded bg-accent-soft px-1.5 py-0.5 font-semibold tracking-wider text-accent">{me.trainer_code}</code>
+              {t("cli.seuCodigo")} <code className="rounded bg-accent-soft px-1.5 py-0.5 font-semibold tracking-wider text-accent">{me.trainer_code}</code>
             </>
           ) : undefined
         }
@@ -66,7 +68,7 @@ export default function ClientesPage() {
       {loading && <Skeleton className="h-40" />}
 
       {pending.length > 0 && (
-        <SectionCard title={`Pedidos de ligação (${pending.length})`}>
+        <SectionCard title={t("cli.pedidos", { n: pending.length })}>
           <ul className="divide-y divide-line">
             {pending.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-3 py-3">
@@ -74,14 +76,14 @@ export default function ClientesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{l.outra_nome ?? l.outra_email}</div>
                   <div className="text-xs text-muted">
-                    {l.outra_email} · pede: {[l.perm_dieta && "plano alimentar", l.perm_progresso && "ver progresso", l.perm_treino && "plano de treino"].filter(Boolean).join(", ")}
+                    {l.outra_email} · {t("cli.pede")} {[l.perm_dieta && t("cli.p.dieta"), l.perm_progresso && t("cli.p.progresso"), l.perm_treino && t("cli.p.treino")].filter(Boolean).join(", ")}
                   </div>
                 </div>
                 <button className="btn btn-ghost !min-h-10" onClick={() => respond(l, false)}>
-                  Recusar
+                  {t("admin.recusar")}
                 </button>
                 <button className="btn btn-primary !min-h-10" onClick={() => respond(l, true)}>
-                  <Icon name="check" size={18} /> Aceitar
+                  <Icon name="check" size={18} /> {t("cli.aceitar")}
                 </button>
               </li>
             ))}
@@ -90,9 +92,8 @@ export default function ClientesPage() {
       )}
 
       {!loading && active.length === 0 && pending.length === 0 && (
-        <EmptyState icon="user" title="Ainda sem clientes">
-          Partilhe o seu código {me?.trainer_code ? <strong>{me.trainer_code}</strong> : null}. O cliente cria a conta, vai a Perfil → O meu treinador e
-          introduz o código. O pedido aparece aqui para aceitar.
+        <EmptyState icon="user" title={t("cli.semClientes")}>
+          {t("cli.partilhe")} {me?.trainer_code ? <strong>{me.trainer_code}</strong> : null}. {t("cli.partilheDica")}
         </EmptyState>
       )}
 
@@ -103,17 +104,17 @@ export default function ClientesPage() {
               <div className="flex items-center gap-3">
                 <Avatar name={l.outra_nome} email={l.outra_email} src={l.outra_avatar} size={40} />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-semibold">{l.outra_nome ?? "Cliente"}</span>
+                  <span className="block truncate font-semibold">{l.outra_nome ?? t("cli.cliente")}</span>
                   <span className="block truncate text-xs text-muted">{l.outra_email}</span>
                 </span>
                 <Icon name="chevronRight" size={18} className="text-muted" />
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {l.perm_dieta && <StatusBadge tone="accent">Plano alimentar</StatusBadge>}
-                {l.perm_progresso && <StatusBadge tone="accent">Progresso</StatusBadge>}
-                {l.perm_treino && <StatusBadge tone="accent">Treino</StatusBadge>}
+                {l.perm_dieta && <StatusBadge tone="accent">{t("cli.planoAlimentar")}</StatusBadge>}
+                {l.perm_progresso && <StatusBadge tone="accent">{t("cli.progresso")}</StatusBadge>}
+                {l.perm_treino && <StatusBadge tone="accent">{t("nav.treino")}</StatusBadge>}
               </div>
-              <span className="text-xs text-muted">Cliente desde {l.aceite_em ? new Date(l.aceite_em).toLocaleDateString("pt-PT") : "–"}</span>
+              <span className="text-xs text-muted">{t("cli.desde", { data: l.aceite_em ? df(new Date(l.aceite_em), { day: "numeric", month: "short", year: "numeric" }) : "–" })}</span>
             </Link>
           ))}
         </div>

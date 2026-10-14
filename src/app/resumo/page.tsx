@@ -7,6 +7,7 @@ import { PageHeader, SectionCard, Skeleton, StatusBadge } from "@/components/ui/
 import { Icon } from "@/components/ui/Icon";
 import { CalorieChart } from "@/components/resumo/CalorieChart";
 import { WeightChart } from "@/components/resumo/WeightChart";
+import { useI18n } from "@/lib/i18n/client";
 
 type Period = "semana" | "mes";
 type Row = {
@@ -35,10 +36,11 @@ function range(period: Period, offset: number): [string, string] {
   return [isoDay(s), isoDay(e)];
 }
 
-const fmtN = (n: number, d = 0) => n.toLocaleString("pt-PT", { minimumFractionDigits: d, maximumFractionDigits: d });
-const dayLabel = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
-
 export default function ResumoPage() {
+  const { t, df, locale } = useI18n();
+  const il = locale === "en" ? "en-GB" : "pt-PT";
+  const fmtN = (n: number, d = 0) => n.toLocaleString(il, { minimumFractionDigits: d, maximumFractionDigits: d });
+  const dayLabel = (d: string) => df(d, { weekday: "short", day: "numeric", month: "short" });
   const sb = useMemo(() => createClient(), []);
   const [period, setPeriod] = useState<Period>("semana");
   const [offset, setOffset] = useState(0);
@@ -116,15 +118,15 @@ export default function ResumoPage() {
 
   const label =
     period === "semana"
-      ? `${new Date(from + "T12:00:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" })} – ${new Date(to + "T12:00:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" })}`
-      : new Date(from + "T12:00:00").toLocaleDateString("pt-PT", { month: "long", year: "numeric" });
+      ? `${df(from, { day: "numeric", month: "short" })} – ${df(to, { day: "numeric", month: "short" })}`
+      : df(from, { month: "long", year: "numeric" });
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Resumo" subtitle="O seu progresso ao longo do tempo" />
+      <PageHeader title={t("resumo.titulo")} subtitle={t("resumo.subtitulo")} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex rounded-xl border border-line bg-card p-1 text-sm" role="group" aria-label="Período">
+        <div className="flex rounded-xl border border-line bg-card p-1 text-sm" role="group" aria-label={t("resumo.periodo")}>
           {(["semana", "mes"] as Period[]).map((p) => (
             <button
               key={p}
@@ -135,16 +137,16 @@ export default function ResumoPage() {
               }}
               className={`min-h-9 rounded-lg px-4 font-medium ${period === p ? "bg-accent text-on-accent" : "text-muted hover:text-ink"}`}
             >
-              {p === "semana" ? "Semana" : "Mês"}
+              {p === "semana" ? t("resumo.semana") : t("resumo.mes")}
             </button>
           ))}
         </div>
         <div className="card flex items-center gap-1 px-1 py-1">
-          <button className="icon-btn" onClick={() => setOffset(offset - 1)} aria-label="Período anterior">
+          <button className="icon-btn" onClick={() => setOffset(offset - 1)} aria-label={t("resumo.anterior")}>
             <Icon name="chevronLeft" />
           </button>
           <span className="min-w-36 text-center text-sm font-semibold first-letter:uppercase">{label}</span>
-          <button className="icon-btn disabled:opacity-30" disabled={offset >= 0} onClick={() => setOffset(offset + 1)} aria-label="Período seguinte">
+          <button className="icon-btn disabled:opacity-30" disabled={offset >= 0} onClick={() => setOffset(offset + 1)} aria-label={t("resumo.seguinte")}>
             <Icon name="chevronRight" />
           </button>
         </div>
@@ -157,28 +159,30 @@ export default function ResumoPage() {
           ))}
         </div>
       ) : (
-        <section className="tabular grid grid-cols-2 gap-3 lg:grid-cols-5" aria-label="Indicadores do período">
-          <Kpi label="Média ingerida" value={avg("kcal") != null ? fmtN(avg("kcal")!) : "–"} unit="kcal/dia" />
-          <Kpi label="Proteína média" value={avg("protein") != null ? fmtN(avg("protein")!) : "–"} unit="g/dia" />
+        <section className="tabular grid grid-cols-2 gap-3 lg:grid-cols-5" aria-label={t("resumo.indicadores")}>
+          <Kpi label={t("resumo.mediaIngerida")} value={avg("kcal") != null ? fmtN(avg("kcal")!) : "–"} unit={t("resumo.kcalDia")} estLabel={t("resumo.estim")} />
+          <Kpi label={t("resumo.proteinaMedia")} value={avg("protein") != null ? fmtN(avg("protein")!) : "–"} unit={t("resumo.gDia")} estLabel={t("resumo.estim")} />
           <Kpi
-            label="Défice acumulado"
+            label={t("resumo.deficeAcumulado")}
+            estLabel={t("resumo.estim")}
             value={withDeficit.length ? `${deficitSum < 0 ? "−" : ""}${fmtN(Math.abs(deficitSum))}` : "–"}
             unit="kcal"
             estimate
             tone={withDeficit.length ? (deficitSum >= 0 ? "good" : "warn") : undefined}
           />
-          <Kpi label="Gordura (≈)" value={fatKg != null ? fmtN(fatKg, 2) : "–"} unit="kg" estimate hint={`${fmtN(KCAL_PER_KG)} kcal ≈ 1 kg`} />
+          <Kpi label={t("resumo.gorduraAprox")} value={fatKg != null ? fmtN(fatKg, 2) : "–"} unit="kg" estimate hint={`${fmtN(KCAL_PER_KG)} kcal ≈ 1 kg`} estLabel={t("resumo.estim")} />
           <Kpi
-            label="Consistência"
+            label={t("resumo.consistencia")}
             value={`${logged.length}/${elapsed}`}
-            unit="dias registados"
+            unit={t("resumo.diasRegistados")}
+            estLabel={t("resumo.estim")}
             className="col-span-2 lg:col-span-1"
           />
         </section>
       )}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SectionCard title="Calorias: ingerido vs gasto">
+        <SectionCard title={t("resumo.grafCalorias")}>
           {rows.length ? <CalorieChart days={rows} weekly={period === "semana"} /> : <Skeleton className="h-56" />}
         </SectionCard>
         <WeightChart weights={weights} goal={goal} />
@@ -188,27 +192,28 @@ export default function ResumoPage() {
         <div className="flex items-start gap-3 rounded-xl border border-line bg-card px-4 py-3 text-sm">
           <Icon name="gauge" size={18} className="mt-0.5 shrink-0 text-accent" />
           <p>
-            Gasto real estimado pela evolução do peso nos últimos 28 dias: <strong className="tabular">{fmtN(tdee)} kcal/dia</strong>{" "}
-            <StatusBadge>estimativa</StatusBadge>. Se for muito diferente do gasto calculado, ajuste o fator de correção da atividade no Perfil.
+            {t("resumo.tdee")} <strong className="tabular">{t("perfil.kcalDia", { kcal: fmtN(tdee) })}</strong>{" "}
+            <StatusBadge>{t("resumo.estimativa")}</StatusBadge>
+            {t("resumo.tdeeDica")}
           </p>
         </div>
       )}
 
-      <SectionCard title="Histórico por dia" padded={false}>
+      <SectionCard title={t("resumo.historico")} padded={false}>
         {/* Desktop: tabela */}
         <div className="hidden overflow-x-auto md:block">
           <table className="tabular w-full text-sm">
             <thead className="text-xs text-muted">
               <tr className="border-b border-line">
-                <th className="px-5 py-2 text-left font-medium">Dia</th>
-                <th className="px-3 py-2 text-right font-medium">Ingerido</th>
-                <th className="px-3 py-2 text-right font-medium">Gasto</th>
-                <th className="px-3 py-2 text-right font-medium">Défice</th>
-                <th className="px-3 py-2 text-right font-medium">Proteína</th>
-                <th className="px-3 py-2 text-right font-medium">Carb.</th>
-                <th className="px-3 py-2 text-right font-medium">Gordura</th>
-                <th className="px-3 py-2 text-right font-medium">Peso</th>
-                <th className="px-5 py-2 text-right font-medium">Sono</th>
+                <th className="px-5 py-2 text-left font-medium">{t("resumo.col.dia")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("cal.ingerido")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("cal.gasto")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("cal.defice")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("macro.proteina")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("macro.hidratosCurto")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("macro.gordura")}</th>
+                <th className="px-3 py-2 text-right font-medium">{t("perfil.peso")}</th>
+                <th className="px-5 py-2 text-right font-medium">{t("ativ.sono")}</th>
               </tr>
             </thead>
             <tbody>
@@ -217,7 +222,7 @@ export default function ResumoPage() {
                   <td className="px-5 py-2.5 first-letter:uppercase">{dayLabel(r.dia)}</td>
                   {r.kcal == null ? (
                     <td colSpan={6} className="px-3 text-center text-xs italic">
-                      sem registo
+                      {t("resumo.semRegisto")}
                     </td>
                   ) : (
                     <>
@@ -246,7 +251,7 @@ export default function ResumoPage() {
               <div className="flex items-baseline justify-between gap-2">
                 <span className="text-sm font-medium first-letter:uppercase">{dayLabel(r.dia)}</span>
                 {r.kcal == null ? (
-                  <span className="text-xs italic text-muted">sem registo</span>
+                  <span className="text-xs italic text-muted">{t("resumo.semRegisto")}</span>
                 ) : (
                   <span className="tabular text-sm">
                     <span className="font-semibold">{fmtN(r.kcal)}</span>
@@ -258,14 +263,14 @@ export default function ResumoPage() {
                 <div className="tabular mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                   {r.deficit != null && (
                     <span className={`font-semibold ${r.deficit >= 0 ? "text-good" : "text-warn"}`}>
-                      {r.deficit >= 0 ? "Défice" : "Excedente"} {fmtN(Math.abs(r.deficit))}
+                      {r.deficit >= 0 ? t("cal.defice") : t("cal.excedente")} {fmtN(Math.abs(r.deficit))}
                     </span>
                   )}
                   <span>
-                    P {Math.round(r.protein ?? 0)} · C {Math.round(r.carbs ?? 0)} · G {Math.round(r.fat ?? 0)} g
+                    {t("macro.p")} {Math.round(r.protein ?? 0)} · {t("macro.c")} {Math.round(r.carbs ?? 0)} · {t("macro.g")} {Math.round(r.fat ?? 0)} g
                   </span>
                   {r.peso != null && <span>{fmtN(r.peso, 1)} kg</span>}
-                  {r.sono != null && <span>sono {r.sono}</span>}
+                  {r.sono != null && <span>{t("resumo.sonoN", { n: r.sono })}</span>}
                 </div>
               )}
             </li>
@@ -273,7 +278,7 @@ export default function ResumoPage() {
         </ul>
       </SectionCard>
 
-      {profile && !profile.altura_cm && <p className="text-xs text-muted">Complete o perfil para ver gasto e défice.</p>}
+      {profile && !profile.altura_cm && <p className="text-xs text-muted">{t("resumo.completePerfil")}</p>}
     </div>
   );
 }
@@ -286,7 +291,9 @@ function Kpi({
   hint,
   tone,
   className = "",
+  estLabel,
 }: {
+  estLabel: string;
   label: string;
   value: string;
   unit: string;
@@ -299,7 +306,7 @@ function Kpi({
     <div className={`card p-4 ${className}`}>
       <div className="flex items-center justify-between gap-2 text-xs text-muted">
         <span>{label}</span>
-        {estimate && <span className="rounded-md border border-line px-1.5 py-px text-[10px] font-medium uppercase">estim.</span>}
+        {estimate && <span className="rounded-md border border-line px-1.5 py-px text-[10px] font-medium uppercase">{estLabel}</span>}
       </div>
       <div className={`mt-1.5 text-2xl font-bold tracking-tight ${tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : ""}`}>{value}</div>
       <div className="text-xs text-muted">{unit}</div>

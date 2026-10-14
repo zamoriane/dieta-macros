@@ -69,7 +69,13 @@ App web responsivo (PC, tablet, telemóvel) para organizar a dieta por macronutr
 4. **Treino → Treinar**: o cliente marca cada série (reps e kg), com cronómetro de descanso; "Última vez" mostra a sessão anterior.
 5. Licença CC BY-SA 3.0: a ficha de cada exercício mostra a autoria e a ligação para a wger.
 
-### 8. Primeiro uso
+### 8. Idiomas (PT-PT / EN)
+1. No Supabase, rode `supabase/migrations/0008_idioma.sql` (guarda o idioma de cada utilizador).
+2. Textos em `src/lib/i18n/pt.ts` (referência) e `src/lib/i18n/en.ts`; o TypeScript obriga o inglês a ter as mesmas chaves.
+3. Nos componentes: `const { t } = useI18n(); t("chave", { variavel })`. Datas e números: `df()` e `nf()`.
+4. O idioma escolhido fica num cookie (`lang`) e no perfil; o seletor PT | EN está no login, no menu do avatar e em Perfil → Conta e segurança.
+
+### 9. Primeiro uso
 1. Crie a conta no ecrã de login e confirme o email.
 2. **Perfil**: sexo, data de nascimento, altura, peso de hoje, metas.
 3. **Plano**: crie as refeições padrão e adicione os alimentos.

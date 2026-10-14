@@ -13,6 +13,8 @@ type Ctx = {
   /** Data formatada no idioma; aceita "AAAA-MM-DD" ou Date. */
   df: (d: string | Date, opts: Intl.DateTimeFormatOptions) => string;
   setLocale: (l: Locale, opts?: { persist?: boolean }) => void;
+  /** Dia da semana abreviado (0 = domingo). */
+  weekday: (n: number) => string;
 };
 
 const I18nCtx = createContext<Ctx | null>(null);
@@ -48,6 +50,10 @@ export function I18nProvider({ initial, children }: { initial: Locale; children:
       nf: (n, maxDigits = 1) => new Intl.NumberFormat(il, { maximumFractionDigits: maxDigits }).format(n),
       df: (d, opts) => (typeof d === "string" ? new Date(d.length === 10 ? d + "T12:00:00" : d) : d).toLocaleDateString(il, opts),
       setLocale,
+      weekday: (n) => {
+        const w = new Date(2024, 0, 7 + n).toLocaleDateString(il, { weekday: "short" }).replace(".", "");
+        return w.charAt(0).toUpperCase() + w.slice(1, 3);
+      },
     };
   }, [locale, setLocale]);
 

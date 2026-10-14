@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { audit, newTrainerCode, requireAdmin } from "@/lib/admin";
+import { getT } from "@/lib/i18n/server";
 
 type Acao = "ativar" | "desativar" | "aprovar_pt" | "recusar_pt" | "remover_pt";
 const ACOES: Acao[] = ["ativar", "desativar", "aprovar_pt", "recusar_pt", "remover_pt"];
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: p } = await admin.from("profiles").select("id, role, ativo, pt_estado, trainer_code").eq("id", id).single();
   if (!p) return NextResponse.json({ error: "utilizador não encontrado" }, { status: 404 });
   if (id === auth.adminId && (acao === "desativar" || acao === "remover_pt")) {
-    return NextResponse.json({ error: "Não pode aplicar esta ação à sua própria conta." }, { status: 400 });
+    return NextResponse.json({ error: (await getT()).t("admin.err.propria") }, { status: 400 });
   }
 
   let update: Record<string, unknown> = {};

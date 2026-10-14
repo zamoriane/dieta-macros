@@ -1,20 +1,23 @@
 "use client";
 import { useState } from "react";
 import { niceMax, useWidth } from "./useWidth";
+import { useI18n } from "@/lib/i18n/client";
 
 export type CalDay = { dia: string; kcal: number | null; gasto: number | null; deficit: number | null };
 
 const H = 220;
 const PAD = { top: 12, right: 8, bottom: 28, left: 44 };
 
-const wd = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short" }).replace(".", "").slice(0, 3);
-const dm = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" });
+
 
 /**
  * Ingerido (barras) vs gasto (linha), no mesmo eixo de kcal.
  * Dias sem registo aparecem como contorno tracejado — nunca como zero.
  */
 export function CalorieChart({ days, weekly }: { days: CalDay[]; weekly: boolean }) {
+  const { t, df, nf } = useI18n();
+  const wd = (d: string) => df(d, { weekday: "short" }).replace(".", "").slice(0, 3);
+  const dm = (d: string) => df(d, { day: "numeric", month: "short" });
   const [ref, width] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -44,12 +47,12 @@ export function CalorieChart({ days, weekly }: { days: CalDay[]; weekly: boolean
 
   return (
     <div ref={ref} className="relative">
-      <svg width={width} height={H} role="img" aria-label="Calorias ingeridas e gastas por dia" onMouseLeave={() => setHover(null)}>
+      <svg width={width} height={H} role="img" aria-label={t("graf.calAria")} onMouseLeave={() => setHover(null)}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--line)" strokeWidth={1} />
             <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" className="fill-[var(--muted)] text-[11px] tabular-nums">
-              {t >= 1000 ? `${(t / 1000).toLocaleString("pt-PT")}k` : t}
+              {t >= 1000 ? `${nf(t / 1000)}k` : t}
             </text>
           </g>
         ))}
@@ -111,14 +114,14 @@ export function CalorieChart({ days, weekly }: { days: CalDay[]; weekly: boolean
         >
           <div className="mb-1 font-semibold first-letter:uppercase">{dm(h.dia)}</div>
           {h.kcal == null ? (
-            <div className="text-muted">Sem registo</div>
+            <div className="text-muted">{t("graf.semRegisto")}</div>
           ) : (
             <div className="tabular space-y-0.5">
-              <Row color="var(--chart-1)" k="Ingerido" v={`${h.kcal} kcal`} />
-              <Row color="var(--chart-2)" k="Gasto" v={h.gasto != null ? `${h.gasto} kcal` : "–"} />
+              <Row color="var(--chart-1)" k={t("cal.ingerido")} v={`${h.kcal} kcal`} />
+              <Row color="var(--chart-2)" k={t("cal.gasto")} v={h.gasto != null ? `${h.gasto} kcal` : "–"} />
               {h.deficit != null && (
                 <div className="flex justify-between gap-4 border-t border-line pt-0.5">
-                  <span className="text-muted">{h.deficit >= 0 ? "Défice" : "Excedente"}</span>
+                  <span className="text-muted">{h.deficit >= 0 ? t("cal.defice") : t("cal.excedente")}</span>
                   <span className="font-semibold">{Math.abs(h.deficit)} kcal</span>
                 </div>
               )}
@@ -128,9 +131,9 @@ export function CalorieChart({ days, weekly }: { days: CalDay[]; weekly: boolean
       )}
 
       <div className="mt-2 flex flex-wrap gap-4 text-xs text-muted">
-        <Legend swatch={<span className="h-2.5 w-3 rounded-sm bg-chart-1" />} label="Ingerido" />
-        <Legend swatch={<span className="h-0.5 w-4 rounded bg-chart-2" />} label="Gasto" />
-        <Legend swatch={<span className="h-2.5 w-3 rounded-sm border border-dashed border-muted" />} label="Sem registo" />
+        <Legend swatch={<span className="h-2.5 w-3 rounded-sm bg-chart-1" />} label={t("cal.ingerido")} />
+        <Legend swatch={<span className="h-0.5 w-4 rounded bg-chart-2" />} label={t("cal.gasto")} />
+        <Legend swatch={<span className="h-2.5 w-3 rounded-sm border border-dashed border-muted" />} label={t("graf.semRegisto")} />
       </div>
     </div>
   );

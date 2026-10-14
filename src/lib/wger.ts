@@ -271,3 +271,37 @@ export function repsDefault(reps: string | null | undefined): number | null {
   const m = (reps ?? "").match(/\d+/);
   return m ? Number(m[0]) : null;
 }
+
+// ---------------------------------------------------------------------------
+// Rótulos em inglês: o catálogo guarda categoria/músculos/equipamento em português;
+// em inglês mostramos os nomes originais da wger.
+// ---------------------------------------------------------------------------
+const CAT_EN = Object.fromEntries(Object.entries(CATEGORIES).map(([en, pt]) => [pt, en]));
+const EQUIP_EN: Record<string, string> = {
+  ...Object.fromEntries(Object.entries(EQUIPMENT).map(([en, pt]) => [pt, en])),
+  "Peso corporal": "Bodyweight",
+};
+export const MUSCLES_EN: Record<number, string> = {
+  1: "Biceps",
+  2: "Front deltoid",
+  3: "Serratus anterior",
+  4: "Chest",
+  5: "Triceps",
+  6: "Abs",
+  7: "Calves (gastrocnemius)",
+  8: "Glutes",
+  9: "Trapezius",
+  10: "Quads",
+  11: "Hamstrings",
+  12: "Lats",
+  13: "Brachialis",
+  14: "Obliques",
+  15: "Soleus",
+};
+
+type Loc = "pt" | "en";
+export const catLabel = (c: string | null | undefined, l: Loc) => (!c ? "" : l === "en" ? CAT_EN[c] ?? c : c);
+export const equipLabel = (e: string, l: Loc) => (l === "en" ? EQUIP_EN[e] ?? e : e);
+export const muscleLabel = (m: { id: number; nome: string }, l: Loc) => (l === "en" ? MUSCLES_EN[m.id] ?? m.nome : m.nome);
+/** Nome a mostrar: em inglês prefere o nome inglês da wger. */
+export const exName = (e: { nome: string; nome_en?: string | null }, l: Loc) => (l === "en" ? e.nome_en || e.nome : e.nome);

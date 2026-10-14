@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { addDays, isoDay } from "@/lib/data";
 import { getLogs, getWorkout, lastSessions, setsSummary, type WorkoutDay, type WorkoutExercise, type WorkoutLog } from "@/lib/workouts";
-import { prescription, repsDefault, WEEKDAYS } from "@/lib/wger";
+import { prescription, repsDefault } from "@/lib/wger";
+import { useI18n } from "@/lib/i18n/client";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { EmptyState, Skeleton } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -15,6 +16,7 @@ type Draft = { reps: string; kg: string };
 
 /** Treino do dia: o cliente regista cada série (repetições e carga) com descanso cronometrado. */
 export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEditPlan?: () => void }) {
+  const { t, weekday: wdName } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const today = isoDay();
   const weekday = new Date().getDay();
@@ -49,17 +51,17 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
 
   useEffect(() => {
     if (!rest) return;
-    const t = setInterval(() => {
+    const iv = setInterval(() => {
       const n = Date.now();
       setNow(n);
       if (n >= rest.until) {
         setRest(null);
         if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.([200, 100, 200]);
-        toast("Descanso terminado — próxima série!");
+        toast(t("sessao.descansoFim"));
       }
     }, 250);
-    return () => clearInterval(t);
-  }, [rest]);
+    return () => clearInterval(iv);
+  }, [rest]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const last = useMemo(() => lastSessions(logs, today), [logs, today]);
   const todayLogs = logs.filter((l) => l.dia === today);
@@ -81,7 +83,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
     const d = draftFor(x, serie);
     const reps = d.reps.trim() === "" ? null : Math.round(Number(d.reps.replace(",", ".")));
     const kg = d.kg.trim() === "" ? null : Number(d.kg.replace(",", "."));
-    if ((reps != null && !(reps >= 0 && reps <= 500)) || (kg != null && !(kg >= 0 && kg < 10000))) return toast("Valores inválidos", { kind: "erro" });
+    if ((reps != null && !(reps >= 0 && reps <= 500)) || (kg != null && !(kg >= 0 && kg < 10000))) return toast(t("sessao.valoresInvalidos"), { kind: "erro" });
     const { error } = await sb.from("workout_logs").insert({
       user_id: ownerId,
       dia: today,
@@ -107,19 +109,19 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
 
   if (loadError)
     return (
-      <EmptyState icon="alert" title="Não foi possível carregar o treino">
-        {/relation|does not exist|schema cache/i.test(loadError) ? "A base de dados ainda não tem as tabelas de treino (falta correr o SQL 0005)." : loadError}
+      <EmptyState icon="alert" title={t("treino.erroCarregar")}>
+        {/relation|does not exist|schema cache/i.test(loadError) ? t("treino.semTabelas") : loadError}
       </EmptyState>
     );
   if (!loaded) return <Skeleton className="h-64" />;
 
   if (!days.length) {
     return (
-      <EmptyState icon="dumbbell" title="Ainda não há plano de treino">
-        O seu treinador pode criar o plano para si, ou pode criá-lo em “Plano de treino”.
+      <EmptyState icon="dumbbell" title={t("sessao.semPlano")}>
+        {t("sessao.semPlanoDica")}
         {onEditPlan && (
           <button className="btn btn-primary mt-3" onClick={onEditPlan}>
-            Criar plano de treino
+            {t("sessao.criarPlano")}
           </button>
         )}
       </EmptyState>
@@ -130,7 +132,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
 
   return (
     <div className="space-y-4">
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Treino">
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label={t("nav.treino")}>
         {days.map((d) => {
           const isToday = d.dias_semana.includes(weekday);
           return (
@@ -143,7 +145,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
             >
               <span className="block font-semibold leading-tight">{d.nome}</span>
               <span className={`block text-[11px] ${d.id === dayId ? "opacity-90" : "text-muted"}`}>
-                {isToday ? "Hoje" : d.dias_semana.length ? d.dias_semana.map((n) => WEEKDAYS[n]).join(" · ") : "Livre"}
+                {isToday ? t("comum.hoje") : d.dias_semana.length ? d.dias_semana.map((n) => wdName(n)).join(" · ") : t("sessao.livre")}
               </span>
             </button>
           );
@@ -153,9 +155,9 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
       {day && (
         <div className="card flex items-center gap-4 p-4">
           <div className="min-w-0 flex-1">
-            <div className="text-xs text-muted">Progresso de hoje</div>
+            <div className="text-xs text-muted">{t("sessao.progressoHoje")}</div>
             <div className="tabular text-lg font-semibold">
-              {doneSets} / {plannedSets || "–"} séries
+              {t("sessao.series", { feitas: doneSets, total: plannedSets || "–" })}
             </div>
             {day.notas && <p className="mt-1 whitespace-pre-line text-xs text-muted">{day.notas}</p>}
           </div>
@@ -165,7 +167,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
         </div>
       )}
 
-      {list.length === 0 && <p className="text-sm text-muted">Este treino ainda não tem exercícios.</p>}
+      {list.length === 0 && <p className="text-sm text-muted">{t("sessao.semExercicios")}</p>}
 
       {list.map((x) => {
         const done = todayLogs.filter((l) => l.workout_exercise_id === x.id).sort((a, b) => a.serie - b.serie);
@@ -175,7 +177,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
         return (
           <section key={x.id} className={`card overflow-hidden ${complete ? "ring-1 ring-good/50" : ""}`}>
             <div className="flex items-center gap-3 p-3">
-              <button onClick={() => x.exercise_id && setInfo(x)} disabled={!x.exercise_id} aria-label={`Ver ficha de ${x.nome}`}>
+              <button onClick={() => x.exercise_id && setInfo(x)} disabled={!x.exercise_id} aria-label={t("treino.verFicha", { nome: x.nome })}>
                 <Thumb src={x.imagem} size={52} />
               </button>
               <div className="min-w-0 flex-1">
@@ -184,10 +186,10 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
                   {complete && <Icon name="check" size={16} className="text-good" />}
                 </h3>
                 <p className="tabular text-xs text-muted">{prescription(x)}</p>
-                {ls && <p className="tabular text-[11px] text-muted">Última vez: {setsSummary(ls.sets)}</p>}
+                {ls && <p className="tabular text-[11px] text-muted">{t("treino.ultimaVez", { s: setsSummary(ls.sets) })}</p>}
               </div>
               {x.exercise_id && (
-                <button className="icon-btn" onClick={() => setInfo(x)} aria-label={`Como fazer ${x.nome}`}>
+                <button className="icon-btn" onClick={() => setInfo(x)} aria-label={t("treino.comoFazerX", { nome: x.nome })}>
                   <Icon name="info" size={20} />
                 </button>
               )}
@@ -195,10 +197,10 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
             {x.notas && <p className="whitespace-pre-line px-3 pb-2 text-xs italic text-muted">{x.notas}</p>}
             <ul className="divide-y divide-line border-t border-line">
               <li className="grid grid-cols-[3.5rem_1fr_1fr_3rem] items-center gap-2 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted">
-                <span>Série</span>
-                <span>Reps</span>
+                <span>{t("sessao.serie")}</span>
+                <span>{t("sessao.reps")}</span>
                 <span>Kg</span>
-                <span className="sr-only">Feito</span>
+                <span className="sr-only">{t("sessao.feito")}</span>
               </li>
               {Array.from({ length: n }, (_, i) => i + 1).map((serie) => {
                 const log = done.find((d) => d.serie === serie);
@@ -217,14 +219,14 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
                         <input
                           className="tabular w-full !min-h-10 !py-1"
                           inputMode="numeric"
-                          aria-label={`Repetições da série ${serie} de ${x.nome}`}
+                          aria-label={t("sessao.repsAria", { n: serie, nome: x.nome })}
                           value={d.reps}
                           onChange={(e) => set({ reps: e.target.value })}
                         />
                         <input
                           className="tabular w-full !min-h-10 !py-1"
                           inputMode="decimal"
-                          aria-label={`Carga da série ${serie} de ${x.nome}`}
+                          aria-label={t("sessao.cargaAria", { n: serie, nome: x.nome })}
                           value={d.kg}
                           onChange={(e) => set({ kg: e.target.value })}
                         />
@@ -233,7 +235,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
                     <button
                       className={`flex h-10 w-10 items-center justify-center rounded-lg border ${log ? "border-good bg-good text-white" : "border-line text-muted hover:border-accent hover:text-accent"}`}
                       onClick={() => (log ? undoSet(log) : logSet(x, serie))}
-                      aria-label={log ? `Desmarcar série ${serie}` : `Marcar série ${serie} como feita`}
+                      aria-label={log ? t("sessao.desmarcar", { n: serie }) : t("sessao.marcar", { n: serie })}
                       aria-pressed={!!log}
                     >
                       <Icon name="check" size={20} strokeWidth={log ? 2.4 : 1.75} />
@@ -243,7 +245,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
               })}
               <li>
                 <button className="flex min-h-10 w-full items-center gap-2 px-3 text-xs font-medium text-accent" onClick={() => setExtra((s) => ({ ...s, [x.id]: (s[x.id] ?? 0) + 1 }))}>
-                  <Icon name="plus" size={16} /> Série extra
+                  <Icon name="plus" size={16} /> {t("sessao.serieExtra")}
                 </button>
               </li>
             </ul>
@@ -259,7 +261,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
         >
           <Icon name="clock" size={22} className="text-accent" />
           <div className="min-w-0 flex-1">
-            <div className="text-xs text-muted">Descanso</div>
+            <div className="text-xs text-muted">{t("sessao.descanso")}</div>
             <div className="tabular text-xl font-bold">
               {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
             </div>
@@ -271,7 +273,7 @@ export function WorkoutSession({ ownerId, onEditPlan }: { ownerId: string; onEdi
             +30 s
           </button>
           <button className="btn btn-primary !min-h-10 !px-3" onClick={() => setRest(null)}>
-            Saltar
+            {t("sessao.saltar")}
           </button>
         </div>
       )}

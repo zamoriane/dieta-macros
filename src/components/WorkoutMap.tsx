@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n/client";
 
 // Leaflet carregado do CDN só quando um mapa é aberto (não pesa no resto do app).
 const LEAFLET_VERSION = "1.9.4";
@@ -38,6 +39,7 @@ function loadLeaflet(): Promise<LeafletLike> {
 }
 
 export function WorkoutMap({ route, className = "" }: { route: [number, number][]; className?: string }) {
+  const { t } = useI18n();
   const el = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -62,7 +64,7 @@ export function WorkoutMap({ route, className = "" }: { route: [number, number][
         // O diálogo anima ao abrir: recalcula o tamanho depois da animação
         setTimeout(() => map?.invalidateSize(), 250);
       })
-      .catch((e) => setErr(e instanceof Error ? e.message : String(e)));
+      .catch(() => setErr(t("mapa.erro")));
     return () => {
       cancelled = true;
       map?.remove();
@@ -71,7 +73,7 @@ export function WorkoutMap({ route, className = "" }: { route: [number, number][
 
   return (
     <div className={`workout-map relative overflow-hidden rounded-xl border border-line bg-card-2 ${className}`}>
-      <div ref={el} className="h-full w-full" role="img" aria-label="Mapa do percurso" />
+      <div ref={el} className="h-full w-full" role="img" aria-label={t("mapa.aria")} />
       {err && <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-muted">{err}</p>}
     </div>
   );

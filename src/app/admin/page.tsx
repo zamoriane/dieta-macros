@@ -5,6 +5,8 @@ import { EmptyState, PageHeader, SectionCard, Skeleton, StatusBadge, type Tone }
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/core";
 
 type U = {
   id: string;
@@ -23,31 +25,36 @@ type U = {
 type Acao = "ativar" | "desativar" | "aprovar_pt" | "recusar_pt" | "remover_pt";
 type AuditRow = { id: number; acao: string; em: string; actor: string | null; target: string | null };
 
-const ROLE: Record<string, { label: string; tone: Tone }> = {
-  admin: { label: "Admin", tone: "accent" },
-  treinador: { label: "Treinador", tone: "good" },
-  cliente: { label: "Cliente", tone: "neutral" },
+const ROLE: Record<string, { label: MessageKey; tone: Tone }> = {
+  admin: { label: "admin.role.admin", tone: "accent" },
+  treinador: { label: "admin.role.treinador", tone: "good" },
+  cliente: { label: "admin.role.cliente", tone: "neutral" },
 };
-const ACAO_LABEL: Record<string, string> = {
-  ativar: "Conta ativada",
-  desativar: "Conta desativada",
-  aprovar_pt: "Perfil Treinador aprovado",
-  recusar_pt: "Pedido de PT recusado",
-  remover_pt: "Perfil Treinador removido",
+const ACAO_LABEL: Record<string, MessageKey> = {
+  ativar: "admin.feito.ativar",
+  desativar: "admin.feito.desativar",
+  aprovar_pt: "admin.feito.aprovar_pt",
+  recusar_pt: "admin.feito.recusar_pt",
+  remover_pt: "admin.feito.remover_pt",
 };
-
-const TITLE: Record<Acao, string> = {
-  ativar: "Ativar conta",
-  desativar: "Desativar conta",
-  aprovar_pt: "Aprovar Perfil Treinador",
-  recusar_pt: "Recusar pedido de PT",
-  remover_pt: "Remover Perfil Treinador",
+const TITLE: Record<Acao, MessageKey> = {
+  ativar: "admin.titulo.ativar",
+  desativar: "admin.titulo.desativar",
+  aprovar_pt: "admin.titulo.aprovar_pt",
+  recusar_pt: "admin.titulo.recusar_pt",
+  remover_pt: "admin.titulo.remover_pt",
 };
-
-const fmt = (s?: string | null) =>
-  s ? new Date(s).toLocaleString("pt-PT", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–";
+const EXPLICA: Record<Acao, MessageKey> = {
+  ativar: "admin.explica.ativar",
+  desativar: "admin.explica.desativar",
+  aprovar_pt: "admin.explica.aprovar_pt",
+  recusar_pt: "admin.explica.recusar_pt",
+  remover_pt: "admin.explica.remover_pt",
+};
 
 export default function AdminPage() {
+  const { t, df } = useI18n();
+  const fmt = (s?: string | null) => (s ? df(new Date(s), { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "–");
   const sb = useMemo(() => createClient(), []);
   const [users, setUsers] = useState<U[]>([]);
   const [me, setMe] = useState<string | null>(null);
@@ -86,8 +93,8 @@ export default function AdminPage() {
         body: JSON.stringify({ acao }),
       });
       const j = await res.json();
-      if (!res.ok) throw new Error(j.error ?? "Erro");
-      toast(`${ACAO_LABEL[acao]}: ${user.nome || user.email}`);
+      if (!res.ok) throw new Error(j.error ?? t("comum.erro"));
+      toast(`${t(ACAO_LABEL[acao])}: ${user.nome || user.email}`);
       setConfirm(null);
       await load();
     } catch (e) {
@@ -100,7 +107,7 @@ export default function AdminPage() {
   if (forbidden) {
     return (
       <div className="mx-auto max-w-xl pt-10">
-        <EmptyState icon="alert" title="Acesso reservado ao administrador" />
+        <EmptyState icon="alert" title={t("admin.reservado")} />
       </div>
     );
   }
@@ -112,31 +119,31 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Administração" subtitle="Utilizadores, treinadores e acessos" />
+      <PageHeader title={t("nav.admin")} subtitle={t("admin.subtitulo")} />
 
       <section className="tabular grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi label="Utilizadores" value={users.length} />
-        <Kpi label="Ativos" value={users.filter((u) => u.ativo !== false).length} />
-        <Kpi label="Treinadores" value={users.filter((u) => u.pt_estado === "aprovado").length} />
-        <Kpi label="Pedidos de PT" value={pending.length} highlight={pending.length > 0} />
+        <Kpi label={t("admin.utilizadores")} value={users.length} />
+        <Kpi label={t("admin.ativos")} value={users.filter((u) => u.ativo !== false).length} />
+        <Kpi label={t("admin.treinadores")} value={users.filter((u) => u.pt_estado === "aprovado").length} />
+        <Kpi label={t("admin.pedidosPt")} value={pending.length} highlight={pending.length > 0} />
       </section>
 
       {pending.length > 0 && (
-        <SectionCard title={`Pedidos de Perfil Treinador (${pending.length})`}>
+        <SectionCard title={t("admin.pedidosPtN", { n: pending.length })}>
           <ul className="divide-y divide-line">
             {pending.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center gap-3 py-3">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{name(u)}</div>
                   <div className="text-xs text-muted">
-                    {u.email} · contacto: {u.pt_contacto_email || "–"} · pedido {fmt(u.pt_pedido_em)}
+                    {u.email} · {t("admin.contacto", { email: u.pt_contacto_email || "–" })} · {t("admin.pedido", { data: fmt(u.pt_pedido_em) })}
                   </div>
                 </div>
                 <button className="btn btn-ghost !min-h-10" onClick={() => setConfirm({ user: u, acao: "recusar_pt" })}>
-                  Recusar
+                  {t("admin.recusar")}
                 </button>
                 <button className="btn btn-primary !min-h-10" onClick={() => setConfirm({ user: u, acao: "aprovar_pt" })}>
-                  <Icon name="check" size={18} /> Aprovar
+                  <Icon name="check" size={18} /> {t("admin.aprovar")}
                 </button>
               </li>
             ))}
@@ -145,12 +152,12 @@ export default function AdminPage() {
       )}
 
       <SectionCard
-        title="Utilizadores"
+        title={t("admin.utilizadores")}
         padded={false}
         action={
           <div className="relative w-56 max-w-full">
             <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-            <input className="w-full !min-h-9 !py-1.5 !pl-9 text-sm" placeholder="Pesquisar" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Pesquisar utilizadores" />
+            <input className="w-full !min-h-9 !py-1.5 !pl-9 text-sm" placeholder={t("admin.pesquisar")} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t("admin.pesquisarAria")} />
           </div>
         }
       >
@@ -170,99 +177,91 @@ export default function AdminPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{name(u)}</span>
-                      {isMe && <span className="text-xs text-muted">(você)</span>}
-                      <StatusBadge tone={role.tone}>{role.label}</StatusBadge>
-                      {u.ativo === false && <StatusBadge tone="bad">Desativado</StatusBadge>}
-                      {u.pt_estado === "pendente" && <StatusBadge tone="warn">PT pendente</StatusBadge>}
-                      {u.pt_estado === "recusado" && <StatusBadge tone="neutral">PT recusado</StatusBadge>}
+                      {isMe && <span className="text-xs text-muted">{t("admin.voce")}</span>}
+                      <StatusBadge tone={role.tone}>{t(role.label)}</StatusBadge>
+                      {u.ativo === false && <StatusBadge tone="bad">{t("admin.desativado")}</StatusBadge>}
+                      {u.pt_estado === "pendente" && <StatusBadge tone="warn">{t("admin.ptPendente")}</StatusBadge>}
+                      {u.pt_estado === "recusado" && <StatusBadge tone="neutral">{t("admin.ptRecusado")}</StatusBadge>}
                       {u.trainer_code && (
                         <code className="rounded-md bg-card-2 px-1.5 py-0.5 text-xs font-semibold tracking-wider">{u.trainer_code}</code>
                       )}
-                      {!u.email_confirmed && <StatusBadge>email por confirmar</StatusBadge>}
+                      {!u.email_confirmed && <StatusBadge>{t("admin.emailPorConfirmar")}</StatusBadge>}
                     </div>
                     <div className="mt-0.5 text-xs text-muted">
-                      {u.email} · criado {fmt(u.created_at)} · último acesso {fmt(u.last_sign_in_at)}
+                      {u.email} · {t("admin.criado", { data: fmt(u.created_at) })} · {t("admin.ultimoAcesso", { data: fmt(u.last_sign_in_at) })}
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {u.pt_estado === "aprovado" && !isMe && (
                       <button className="btn btn-ghost !min-h-9 !px-3 !text-xs" onClick={() => setConfirm({ user: u, acao: "remover_pt" })}>
-                        Remover PT
+                        {t("admin.removerPt")}
                       </button>
                     )}
                     {u.pt_estado !== "aprovado" && u.pt_estado !== "pendente" && (
                       <button className="btn btn-ghost !min-h-9 !px-3 !text-xs" onClick={() => setConfirm({ user: u, acao: "aprovar_pt" })}>
-                        Tornar treinador
+                        {t("admin.tornarTreinador")}
                       </button>
                     )}
                     {!isMe &&
                       (u.ativo === false ? (
                         <button className="btn btn-ghost !min-h-9 !px-3 !text-xs" onClick={() => setConfirm({ user: u, acao: "ativar" })}>
-                          Ativar
+                          {t("admin.ativar")}
                         </button>
                       ) : (
                         <button className="btn btn-ghost !min-h-9 !px-3 !text-xs !text-bad" onClick={() => setConfirm({ user: u, acao: "desativar" })}>
-                          Desativar
+                          {t("admin.desativar")}
                         </button>
                       ))}
                   </div>
                 </li>
               );
             })}
-            {!filtered.length && <li className="px-5 py-6 text-center text-sm text-muted">Nenhum utilizador encontrado.</li>}
+            {!filtered.length && <li className="px-5 py-6 text-center text-sm text-muted">{t("admin.nenhum")}</li>}
           </ul>
         )}
       </SectionCard>
 
-      <SectionCard title="Últimas ações">
+      <SectionCard title={t("admin.ultimasAcoes")}>
         {audit.length ? (
           <ul className="space-y-2 text-sm">
             {audit.map((a) => (
               <li key={a.id} className="flex flex-wrap justify-between gap-2">
                 <span>
-                  {ACAO_LABEL[a.acao] ?? a.acao} · <span className="font-medium">{a.target ? name(byId.get(a.target) ?? ({ id: a.target } as U)) : "–"}</span>
+                  {ACAO_LABEL[a.acao] ? t(ACAO_LABEL[a.acao]) : a.acao} · <span className="font-medium">{a.target ? name(byId.get(a.target) ?? ({ id: a.target } as U)) : "–"}</span>
                 </span>
                 <span className="text-xs text-muted">
-                  {fmt(a.em)} por {a.actor ? name(byId.get(a.actor) ?? ({ id: a.actor } as U)) : "–"}
+                  {fmt(a.em)} {t("admin.por")} {a.actor ? name(byId.get(a.actor) ?? ({ id: a.actor } as U)) : "–"}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted">Ainda sem ações registadas.</p>
+          <p className="text-sm text-muted">{t("admin.semAcoes")}</p>
         )}
       </SectionCard>
 
       <ResponsiveDialog
         open={!!confirm}
-        title={confirm ? TITLE[confirm.acao] : ""}
+        title={confirm ? t(TITLE[confirm.acao]) : ""}
         onClose={() => setConfirm(null)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setConfirm(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button
               className={`btn flex-1 ${confirm?.acao === "desativar" || confirm?.acao === "remover_pt" ? "bg-bad text-white" : "btn-primary"}`}
               disabled={busy}
               onClick={() => confirm && run(confirm.user, confirm.acao)}
             >
-              {busy ? "A aplicar…" : "Confirmar"}
+              {busy ? t("admin.aAplicar") : t("comum.confirmar")}
             </button>
           </>
         }
       >
         {confirm && (
           <p className="text-sm">
-            {
-              {
-                ativar: "A conta volta a poder entrar e usar o app.",
-                desativar: "A pessoa deixa de conseguir entrar e o acesso aos dados fica bloqueado. Os dados não são apagados e a conta pode ser reativada.",
-                aprovar_pt: "A pessoa passa a ter Perfil Treinador e recebe um código único para partilhar com os clientes.",
-                recusar_pt: "O pedido fica recusado. A pessoa pode voltar a pedir mais tarde.",
-                remover_pt: "A pessoa deixa de ser treinador e o código deixa de funcionar.",
-              }[confirm.acao]
-            }{" "}
+            {t(EXPLICA[confirm.acao])}{" "}
             <span className="font-medium">({name(confirm.user)})</span>
           </p>
         )}

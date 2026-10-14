@@ -48,7 +48,7 @@ export function TrainerLinks() {
       p_progresso: perms.perm_progresso,
     });
     setBusy(false);
-    if (error) return toast(rpcError(error), { kind: "erro" });
+    if (error) return toast(rpcError(error, t), { kind: "erro" });
     setCode("");
     toast(t("links.pedidoEnviado", { nome: (data as { trainer_nome: string }).trainer_nome }));
     load();
@@ -57,7 +57,7 @@ export function TrainerLinks() {
   async function togglePerm(l: Link, key: keyof Perms) {
     const next = { perm_dieta: l.perm_dieta, perm_progresso: l.perm_progresso, perm_treino: l.perm_treino, [key]: !l[key] };
     const { error } = await sb.rpc("set_link_perms", { p_id: l.id, p_dieta: next.perm_dieta, p_treino: next.perm_treino, p_progresso: next.perm_progresso });
-    if (error) return toast(rpcError(error), { kind: "erro" });
+    if (error) return toast(rpcError(error, t), { kind: "erro" });
     toast(t("links.permAtualizadas"));
     load();
   }
@@ -65,7 +65,7 @@ export function TrainerLinks() {
   async function doRevoke() {
     if (!revoke) return;
     const { error } = await sb.rpc("revoke_link", { p_id: revoke.id });
-    if (error) return toast(rpcError(error), { kind: "erro" });
+    if (error) return toast(rpcError(error, t), { kind: "erro" });
     toast(t("links.terminada", { nome: revoke.outra_nome ?? t("links.oTreinador") }));
     setRevoke(null);
     load();

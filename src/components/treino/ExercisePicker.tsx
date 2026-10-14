@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
 import { searchExercises, type Exercise, type Params } from "@/lib/workouts";
-import { CATEGORIES } from "@/lib/wger";
+import { CATEGORIES, catLabel, equipLabel, exName, muscleLabel } from "@/lib/wger";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/core";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { FormField, Skeleton } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -13,10 +15,11 @@ const CATS = Object.values(CATEGORIES);
 
 /** Campos de prescrição (séries, repetições, carga, descanso, notas). */
 export function ParamsFields({ value, onChange }: { value: Params; onChange: (p: Params) => void }) {
+  const { t } = useI18n();
   const num = (s: string) => (s.trim() === "" ? null : Number(s.replace(",", ".")));
   return (
     <div className="grid grid-cols-2 gap-3">
-      <FormField label="Séries">
+      <FormField label={t("ex.series")}>
         <input
           className="w-full"
           inputMode="numeric"
@@ -24,10 +27,10 @@ export function ParamsFields({ value, onChange }: { value: Params; onChange: (p:
           onChange={(e) => onChange({ ...value, series: num(e.target.value) })}
         />
       </FormField>
-      <FormField label="Repetições" hint="Ex.: 8-12, 15, 30 s">
+      <FormField label={t("ex.repeticoes")} hint={t("ex.repeticoesDica")}>
         <input className="w-full" value={value.reps ?? ""} maxLength={20} onChange={(e) => onChange({ ...value, reps: e.target.value || null })} />
       </FormField>
-      <FormField label="Carga (kg)" hint="Opcional">
+      <FormField label={t("ex.carga")} hint={t("comum.opcional")}>
         <input
           className="w-full"
           inputMode="decimal"
@@ -35,7 +38,7 @@ export function ParamsFields({ value, onChange }: { value: Params; onChange: (p:
           onChange={(e) => onChange({ ...value, carga_kg: num(e.target.value) })}
         />
       </FormField>
-      <FormField label="Descanso (s)">
+      <FormField label={t("ex.descanso")}>
         <input
           className="w-full"
           inputMode="numeric"
@@ -44,7 +47,7 @@ export function ParamsFields({ value, onChange }: { value: Params; onChange: (p:
         />
       </FormField>
       <div className="col-span-2">
-        <FormField label="Notas" hint="Técnica, cadência, variações…">
+        <FormField label={t("comum.notas")} hint={t("ex.notasDica")}>
           <textarea className="w-full" rows={2} maxLength={500} value={value.notas ?? ""} onChange={(e) => onChange({ ...value, notas: e.target.value || null })} />
         </FormField>
       </div>
@@ -52,10 +55,11 @@ export function ParamsFields({ value, onChange }: { value: Params; onChange: (p:
   );
 }
 
-export function paramsError(p: Params): string | null {
-  if (p.series != null && (!Number.isInteger(p.series) || p.series < 1 || p.series > 20)) return "Séries: entre 1 e 20.";
-  if (p.carga_kg != null && (!Number.isFinite(p.carga_kg) || p.carga_kg < 0 || p.carga_kg > 9999)) return "Carga inválida.";
-  if (p.descanso_s != null && (!Number.isInteger(p.descanso_s) || p.descanso_s < 0 || p.descanso_s > 900)) return "Descanso: 0 a 900 s.";
+/** Devolve a chave da mensagem de erro (traduzir com t()) ou null. */
+export function paramsError(p: Params): MessageKey | null {
+  if (p.series != null && (!Number.isInteger(p.series) || p.series < 1 || p.series > 20)) return "ex.err.series";
+  if (p.carga_kg != null && (!Number.isFinite(p.carga_kg) || p.carga_kg < 0 || p.carga_kg > 9999)) return "ex.err.carga";
+  if (p.descanso_s != null && (!Number.isInteger(p.descanso_s) || p.descanso_s < 0 || p.descanso_s > 900)) return "ex.err.descanso";
   return null;
 }
 
@@ -68,7 +72,8 @@ export function ExercisePicker({
   title: string;
   onClose: () => void;
   onPick: (ex: Exercise | { id: null; nome: string; imagem_thumb: null }, p: Params) => Promise<void> | void;
-}) {
+}) {  const { t, locale } = useI18n();
+
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string | null>(null);
   const [results, setResults] = useState<Exercise[] | null>(null);
@@ -79,7 +84,7 @@ export function ExercisePicker({
 
   useEffect(() => {
     let alive = true;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setResults(null);
       const r = await searchExercises(q.trim(), cat);
       if (!alive) return;
@@ -88,7 +93,7 @@ export function ExercisePicker({
     }, q ? 300 : 0);
     return () => {
       alive = false;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [q, cat]);
 
@@ -107,16 +112,16 @@ export function ExercisePicker({
     <ResponsiveDialog
       open
       wide
-      title={sel ? sel.nome : title}
+      title={sel ? (sel.id == null ? sel.nome : exName(sel, locale)) : title}
       onClose={sel ? () => setSel(null) : onClose}
       footer={
         sel ? (
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setSel(null)}>
-              <Icon name="chevronLeft" size={18} /> Voltar
+              <Icon name="chevronLeft" size={18} /> {t("comum.voltar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!!err || busy} onClick={add}>
-              {busy ? "A adicionar…" : "Adicionar ao treino"}
+              {busy ? t("comum.aAdicionar") : t("ex.adicionarTreino")}
             </button>
           </>
         ) : undefined
@@ -125,23 +130,23 @@ export function ExercisePicker({
       {sel ? (
         <div className="space-y-5">
           <ParamsFields value={params} onChange={setParams} />
-          {err && <p className="text-xs text-bad">{err}</p>}
+          {err && <p className="text-xs text-bad">{t(err)}</p>}
           {sel.id != null && <ExerciseDetail exerciseId={sel.id} initial={sel} />}
         </div>
       ) : (
         <div className="space-y-3">
           <label className="relative block">
-            <span className="sr-only">Procurar exercício</span>
+            <span className="sr-only">{t("ex.procurar")}</span>
             <Icon name="search" size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input
               data-autofocus
               className="w-full !pl-10"
-              placeholder="Ex.: supino, agachamento, remada, prancha"
+              placeholder={t("ex.procurarPh")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
           </label>
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label="Grupo muscular">
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1" role="group" aria-label={t("ex.grupo")}>
             {[null, ...CATS].map((c) => (
               <button
                 key={c ?? "todos"}
@@ -151,7 +156,7 @@ export function ExercisePicker({
                   cat === c ? "border-accent bg-accent text-on-accent" : "border-line text-muted hover:text-ink"
                 }`}
               >
-                {c ?? "Todos"}
+                {c ? catLabel(c, locale) : t("ex.todos")}
               </button>
             ))}
           </div>
@@ -162,10 +167,10 @@ export function ExercisePicker({
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-16" />
               ))}
-              {!q && !cat && <p className="text-xs text-muted">Na primeira utilização o catálogo da wger é carregado (alguns segundos).</p>}
+              {!q && !cat && <p className="text-xs text-muted">{t("ex.primeiraVez")}</p>}
             </div>
           )}
-          {results && results.length === 0 && !error && <p className="py-4 text-center text-sm text-muted">Nenhum exercício encontrado.</p>}
+          {results && results.length === 0 && !error && <p className="py-4 text-center text-sm text-muted">{t("ex.nenhum")}</p>}
           {results && (
             <ul className="divide-y divide-line">
               {results.map((x) => (
@@ -173,9 +178,9 @@ export function ExercisePicker({
                   <button className="flex w-full items-center gap-3 py-2 text-left hover:bg-card-2/60" onClick={() => setSel(x)}>
                     <Thumb src={x.imagem_thumb} />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium leading-snug">{x.nome}</span>
+                      <span className="block text-sm font-medium leading-snug">{exName(x, locale)}</span>
                       <span className="block truncate text-xs text-muted">
-                        {[x.categoria, x.musculos.filter((m) => !m.sec).map((m) => m.nome).join(", "), x.equipamento.join(", ")]
+                        {[catLabel(x.categoria, locale), x.musculos.filter((m) => !m.sec).map((m) => muscleLabel(m, locale)).join(", "), x.equipamento.map((q) => equipLabel(q, locale)).join(", ")]
                           .filter(Boolean)
                           .join(" · ")}
                       </span>
@@ -191,10 +196,10 @@ export function ExercisePicker({
               className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-sm font-medium text-accent"
               onClick={() => setSel({ id: null, nome: q.trim(), imagem_thumb: null })}
             >
-              <Icon name="plus" size={18} /> Usar “{q.trim()}” como exercício livre
+              <Icon name="plus" size={18} /> {t("ex.livre", { q: q.trim() })}
             </button>
           )}
-          <p className="text-[11px] text-muted">Exercícios da base aberta wger.de (CC BY-SA). A maioria tem nome em inglês; pode pesquisar em português.</p>
+          <p className="text-[11px] text-muted">{t("ex.creditos")}</p>
         </div>
       )}
     </ResponsiveDialog>

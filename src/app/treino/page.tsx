@@ -5,10 +5,12 @@ import { me } from "@/lib/data";
 import { PageHeader, Skeleton } from "@/components/ui/Primitives";
 import { WorkoutSession } from "@/components/treino/WorkoutSession";
 import { WorkoutEditor } from "@/components/treino/WorkoutEditor";
+import { useI18n } from "@/lib/i18n/client";
 
 type Tab = "treinar" | "plano";
 
 export default function TreinoPage() {
+  const { t } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [uid, setUid] = useState<string | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -20,7 +22,7 @@ export default function TreinoPage() {
       const { data: links } = await sb.rpc("my_links");
       const n: Record<string, string> = {};
       for (const l of (links ?? []) as { outra_id: string; outra_nome: string | null; papel: string }[]) {
-        n[l.outra_id] = `${l.outra_nome ?? "Treinador"}${l.papel === "cliente" ? " (treinador)" : ""}`;
+        n[l.outra_id] = l.papel === "cliente" ? t("links.nomeTreinador", { nome: l.outra_nome ?? t("links.treinador") }) : l.outra_nome ?? "";
       }
       setNames(n);
     })();
@@ -39,10 +41,10 @@ export default function TreinoPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Treino" subtitle="Registe as séries do treino do dia e acompanhe a evolução das cargas." />
+      <PageHeader title={t("treino.titulo")} subtitle={t("treino.subtitulo")} />
       <div className="flex rounded-xl border border-line bg-card p-1 text-sm sm:w-fit" role="tablist">
-        {tabBtn("treinar", "Treinar")}
-        {tabBtn("plano", "Plano de treino")}
+        {tabBtn("treinar", t("treino.treinar"))}
+        {tabBtn("plano", t("treino.plano"))}
       </div>
       {!uid ? (
         <Skeleton className="h-64" />
