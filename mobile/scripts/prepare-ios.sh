@@ -12,6 +12,9 @@ PLIST=ios/App/App/Info.plist
 pb() { /usr/libexec/PlistBuddy -c "$1" "$PLIST" 2>/dev/null || true; }
 pb "Delete :NSHealthShareUsageDescription"
 pb "Add :NSHealthShareUsageDescription string A Taking care lê da app Saúde as calorias ativas e basais, passos, minutos de exercício, sono, frequência cardíaca em repouso, variabilidade cardíaca, peso e treinos para calcular o seu gasto energético, o défice do dia e mostrar o seu progresso. Os dados não são usados para publicidade."
+# Exigido pela Apple porque o plugin de Saúde inclui funções de escrita (a app só lê).
+pb "Delete :NSHealthUpdateUsageDescription"
+pb "Add :NSHealthUpdateUsageDescription string A Taking care só lê dados da app Saúde para calcular o seu gasto energético e progresso. Não escreve nem altera dados na app Saúde."
 pb "Delete :ITSAppUsesNonExemptEncryption"
 pb "Add :ITSAppUsesNonExemptEncryption bool false"
 pb "Delete :CFBundleDisplayName"
