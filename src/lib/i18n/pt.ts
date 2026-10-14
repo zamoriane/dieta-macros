@@ -602,5 +602,7 @@ export const pt = {
   "saude.sincronizar": "Sincronizar agora",
   "saude.sincronizado": "{n} dias sincronizados",
   "saude.indisponivel": "{nome} não está disponível neste aparelho.",
+  "auth.google": "Continuar com Google",
+  "auth.ou": "ou",
   // @@END
 } as const;

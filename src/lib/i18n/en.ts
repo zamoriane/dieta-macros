@@ -603,5 +603,7 @@ export const en: Messages = {
   "saude.sincronizar": "Sync now",
   "saude.sincronizado": "{n} days synced",
   "saude.indisponivel": "{nome} isn't available on this device.",
+  "auth.google": "Continue with Google",
+  "auth.ou": "or",
   // @@END
 };
