@@ -1,12 +1,10 @@
 "use client";
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { buildDays, type AggSample, type NativeWorkout, type Sample } from "./nativeHealth";
 
 // Ponte para o plugin nativo. Só existe dentro da app (Capacitor); no navegador tudo devolve "não disponível".
-type Cap = {
-  isNativePlatform?: () => boolean;
-  getPlatform?: () => string;
-  registerPlugin?: <T>(name: string) => T;
-};
+// A página vem do servidor (server.url): a ponte nativa injeta window.Capacitor, mas o registerPlugin
+// vem do @capacitor/core empacotado aqui.
 type HealthPlugin = {
   isAvailable(): Promise<{ available: boolean; reason?: string }>;
   requestAuthorization(o: { read: string[]; write: string[] }): Promise<{ readAuthorized: string[]; readDenied: string[] }>;
@@ -19,20 +17,17 @@ export const READ_TYPES = ["calories", "basalCalories", "steps", "exerciseTime",
 const KEY = "nativeHealthConnected";
 const LAST = "nativeHealthSync";
 
-function cap(): Cap | null {
-  return typeof window === "undefined" ? null : ((window as unknown as { Capacitor?: Cap }).Capacitor ?? null);
-}
 export function isNativeApp(): boolean {
-  return !!cap()?.isNativePlatform?.();
+  return typeof window !== "undefined" && Capacitor.isNativePlatform();
 }
 export function nativePlatform(): "ios" | "android" | "web" {
-  const p = cap()?.getPlatform?.();
+  const p = typeof window !== "undefined" ? Capacitor.getPlatform() : "web";
   return p === "ios" || p === "android" ? p : "web";
 }
 let plugin: HealthPlugin | null = null;
 function health(): HealthPlugin | null {
   if (!isNativeApp()) return null;
-  plugin ??= cap()!.registerPlugin!<HealthPlugin>("Health");
+  plugin ??= registerPlugin<HealthPlugin>("Health");
   return plugin;
 }
 export function isHealthConnected(): boolean {

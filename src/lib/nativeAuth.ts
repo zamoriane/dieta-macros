@@ -1,5 +1,6 @@
 "use client";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { registerPlugin } from "@capacitor/core";
 import { isNativeApp } from "./nativeHealthClient";
 
 // Login Google e Apple dentro da app: a Google bloqueia o OAuth em WebViews e a Apple
@@ -26,8 +27,7 @@ let plugin: SocialLoginPlugin | null = null;
 let ready: Promise<void> | null = null;
 
 function social(): SocialLoginPlugin {
-  const cap = (window as unknown as { Capacitor: { registerPlugin: <T>(n: string) => T } }).Capacitor;
-  plugin ??= cap.registerPlugin<SocialLoginPlugin>("SocialLogin");
+  plugin ??= registerPlugin<SocialLoginPlugin>("SocialLogin");
   ready ??= plugin.initialize({
     google: { webClientId: WEB_CLIENT_ID, iOSClientId: IOS_CLIENT_ID, iOSServerClientId: WEB_CLIENT_ID, mode: "online" },
     apple: {}, // no iOS usa o identificador da app automaticamente
