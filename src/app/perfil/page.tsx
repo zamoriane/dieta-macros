@@ -254,12 +254,22 @@ export default function PerfilPage() {
         </a>
       </section>
 
-      <form action="/auth/signout" method="post" className="pt-2 text-center text-sm text-muted">
-        {email} ·{" "}
-        <button type="submit" className="text-accent">
-          Sair
-        </button>
-      </form>
+      <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
+        <div>
+          <h2 className="font-medium">Conta e segurança</h2>
+          <p className="text-sm text-muted">{email}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <a href="/nova-senha" className="btn btn-ghost">
+            Alterar palavra-passe
+          </a>
+          <form action="/auth/signout" method="post">
+            <button type="submit" className="btn btn-ghost !text-bad">
+              Sair (terminar sessão)
+            </button>
+          </form>
+        </div>
+      </section>
     </div>
   );
 }
