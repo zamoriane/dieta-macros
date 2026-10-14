@@ -42,8 +42,8 @@ export default function LoginPage() {
 
   return (
     <div className="mx-auto mt-16 max-w-sm">
-      <h1 className="text-3xl font-semibold tracking-tight">Dieta Macros</h1>
-      <p className="mt-1 text-muted">Calorias, macros e défice do dia, com dados do Oura.</p>
+      <h1 className="text-3xl font-semibold tracking-tight">Taking care of yourself</h1>
+      <p className="mt-1 text-muted">Calorias, macros, exercícios e défice do dia, com dados do Oura e Apple.</p>
       <form onSubmit={submit} className="mt-8 space-y-3 rounded-2xl border border-line bg-card p-5">
         <input className="w-full" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" />
         {mode !== "recuperar" && (

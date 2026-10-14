@@ -7,10 +7,10 @@ import { ToastHost } from "@/components/ui/Toast";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Dieta Macros",
-  description: "Calorias, macros, défice e dados de atividade num só lugar",
+  title: "Taking care of yourself",
+  description: "Calorias, macros, exercícios e défice do dia, com dados do Oura e Apple.",
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Macros", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Taking care", statusBarStyle: "default" },
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 

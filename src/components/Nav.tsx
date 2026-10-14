@@ -29,7 +29,7 @@ function Logo() {
           <path d="M12 8a4 4 0 1 0 4 4" opacity="0.7" />
         </svg>
       </span>
-      Dieta Macros
+      Taking care of yourself
     </Link>
   );
 }

@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/ui/Primitives";
 
-export const metadata = { title: "Conta desativada · Dieta Macros" };
+export const metadata = { title: "Conta desativada · Taking care of yourself" };
 
 export default function ContaDesativada() {
   return (
