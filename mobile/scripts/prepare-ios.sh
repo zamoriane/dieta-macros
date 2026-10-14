@@ -41,7 +41,7 @@ if "GIDSignIn" not in s:
     open(p, "w").write(s)
 PY
 
-# Capacidade HealthKit (o identificador da app no portal Apple tem de ter HealthKit ativo)
+# Capacidades HealthKit e Sign in with Apple (ambas ativas no identificador da app no portal Apple)
 cat > ios/App/App/App.entitlements <<'XML'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -51,6 +51,10 @@ cat > ios/App/App/App.entitlements <<'XML'
   <true/>
   <key>com.apple.developer.healthkit.access</key>
   <array/>
+  <key>com.apple.developer.applesignin</key>
+  <array>
+    <string>Default</string>
+  </array>
 </dict>
 </plist>
 XML

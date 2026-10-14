@@ -604,5 +604,6 @@ export const pt = {
   "saude.indisponivel": "{nome} não está disponível neste aparelho.",
   "auth.google": "Continuar com Google",
   "auth.ou": "ou",
+  "auth.apple": "Continuar com a Apple",
   // @@END
 } as const;

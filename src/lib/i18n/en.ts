@@ -605,5 +605,6 @@ export const en: Messages = {
   "saude.indisponivel": "{nome} isn't available on this device.",
   "auth.google": "Continue with Google",
   "auth.ou": "or",
+  "auth.apple": "Continue with Apple",
   // @@END
 };

@@ -15,7 +15,7 @@ const PT: { title: string; intro: string; sections: Section[] } = {
       h: "Dados que guardamos",
       li: [
         "Conta: email, palavra-passe (guardada cifrada pelo Supabase Auth), idioma e, se escolher, nome e foto de perfil.",
-        "Se entrar com Google: recebemos apenas o seu email, nome e um identificador da conta Google. Não acedemos a mais nada da sua conta Google.",
+        "Se entrar com Google ou com a Apple: recebemos apenas o seu email (com a Apple pode ser um endereço reencaminhado que esconde o verdadeiro), o nome e um identificador da conta. Não acedemos a mais nada dessas contas.",
         "Perfil: sexo, data de nascimento, altura, metas e fatores de cálculo.",
         "Registos: alimentos e quantidades, peso, medidas corporais (cintura, anca, pescoço e outras), plano alimentar, plano de treino e séries feitas.",
         "Oura (se ligar): resumos diários de atividade, calorias, passos, sono, prontidão e stress.",
@@ -47,7 +47,7 @@ const PT: { title: string; intro: string; sections: Section[] } = {
       h: "Serviços que usamos",
       li: [
         "Supabase — base de dados, autenticação e fotos, na União Europeia (Frankfurt).",
-        "Google — só se escolher entrar com Google, para confirmar a sua identidade.",
+        "Google e Apple — só se escolher entrar com uma dessas contas, para confirmar a sua identidade.",
         "Vercel — alojamento da aplicação; os pedidos podem passar por servidores fora da UE.",
         "Calorie API — recebe apenas os termos que pesquisa para encontrar alimentos.",
         "wger — catálogo público de exercícios; não recebe dados seus.",
@@ -84,7 +84,7 @@ const EN: typeof PT = {
       h: "Data we keep",
       li: [
         "Account: email, password (stored hashed by Supabase Auth), language and, if you choose, name and profile photo.",
-        "If you sign in with Google: we only receive your email, name and a Google account identifier. We don't access anything else in your Google account.",
+        "If you sign in with Google or Apple: we only receive your email (with Apple this may be a relay address that hides your real one), your name and an account identifier. We don't access anything else in those accounts.",
         "Profile: sex, date of birth, height, goals and calculation factors.",
         "Logs: foods and amounts, weight, body measurements (waist, hips, neck and others), meal plan, workout plan and sets done.",
         "Oura (if connected): daily summaries of activity, calories, steps, sleep, readiness and stress.",
@@ -116,7 +116,7 @@ const EN: typeof PT = {
       h: "Services we use",
       li: [
         "Supabase — database, authentication and photos, in the European Union (Frankfurt).",
-        "Google — only if you choose to sign in with Google, to confirm your identity.",
+        "Google and Apple — only if you choose to sign in with one of those accounts, to confirm your identity.",
         "Vercel — app hosting; requests may pass through servers outside the EU.",
         "Calorie API — only receives the terms you search for to find foods.",
         "wger — public exercise catalogue; receives none of your data.",
