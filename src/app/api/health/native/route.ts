@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { data: existing } = valid.length
     ? await admin.from("health_daily").select("dia, workouts").eq("user_id", userId).in("dia", valid.map((d) => d.dia))
     : { data: [] };
-  const exBy = new Map((existing ?? []).map((r) => [r.dia as string, (r.workouts ?? []) as Workout[]]));
+  const exBy = new Map<string, Workout[]>((existing ?? []).map((r) => [r.dia as string, (r.workouts ?? []) as Workout[]]));
 
   const erros: string[] = [];
   for (const d of valid) {

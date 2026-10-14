@@ -128,7 +128,9 @@ export default function HojePage() {
   // Na app nativa: lê a Apple Saúde / Health Connect ao abrir (no máximo de 30 em 30 min).
   useEffect(() => {
     autoSyncHealth()
-      .then((did) => did && load())
+      .then((did) => {
+        if (did) load();
+      })
       .catch(() => {});
   }, [load]);
 
