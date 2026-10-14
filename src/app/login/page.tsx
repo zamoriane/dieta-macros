@@ -16,7 +16,9 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (new URLSearchParams(location.search).get("erro") === "link") setMsg(t("auth.linkExpirado"));
+    const sp = new URLSearchParams(location.search);
+    if (sp.get("erro") === "link") setMsg(t("auth.linkExpirado"));
+    if (sp.get("conta") === "apagada") setMsg(t("apagar.feito"));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const errText = (m: string) => {
@@ -104,6 +106,14 @@ export default function LoginPage() {
           </button>
         )}
       </div>
+      <p className="mt-10 flex justify-center gap-4 text-xs text-muted">
+        <a href="/privacidade" className="hover:text-ink">
+          {t("legal.privacidade")}
+        </a>
+        <a href="/termos" className="hover:text-ink">
+          {t("legal.termos")}
+        </a>
+      </p>
     </div>
   );
 }

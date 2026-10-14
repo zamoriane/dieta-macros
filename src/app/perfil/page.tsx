@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/Toast";
 import { TrainerLinks } from "@/components/perfil/TrainerLinks";
 import { AvatarEditor } from "@/components/perfil/AvatarEditor";
 import { MeasurementsCard } from "@/components/medidas/MeasurementsCard";
+import { DeleteAccount } from "@/components/perfil/DeleteAccount";
 import { notifyProfileChanged } from "@/lib/avatar";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/core";
@@ -294,7 +295,16 @@ export default function PerfilPage() {
               {t("perfil.sair")}
             </button>
           </form>
+          <DeleteAccount email={email} />
         </div>
+        <p className="flex gap-4 text-xs text-muted">
+          <a href="/privacidade" className="hover:text-ink">
+            {t("legal.privacidade")}
+          </a>
+          <a href="/termos" className="hover:text-ink">
+            {t("legal.termos")}
+          </a>
+        </p>
       </section>
     </div>
   );

@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("app.tagline"),
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: "Taking care", statusBarStyle: "default" },
-    icons: { icon: "/icon.svg", apple: "/icon.svg" },
+    icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192" }], apple: "/apple-touch-icon.png" },
   };
 }
 
