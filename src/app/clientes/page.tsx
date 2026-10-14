@@ -6,6 +6,7 @@ import { getProfile, type Profile } from "@/lib/data";
 import { myLinks, rpcError, type Link as TLink } from "@/lib/links";
 import { EmptyState, PageHeader, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/Avatar";
 import { toast } from "@/components/ui/Toast";
 
 export default function ClientesPage() {
@@ -69,6 +70,7 @@ export default function ClientesPage() {
           <ul className="divide-y divide-line">
             {pending.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-3 py-3">
+                <Avatar name={l.outra_nome} email={l.outra_email} src={l.outra_avatar} size={36} />
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{l.outra_nome ?? l.outra_email}</div>
                   <div className="text-xs text-muted">
@@ -99,9 +101,7 @@ export default function ClientesPage() {
           {active.map((l) => (
             <Link key={l.id} href={`/clientes/${l.outra_id}`} className="card flex flex-col gap-2 p-4 transition-colors hover:bg-card-2">
               <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft font-semibold text-accent">
-                  {(l.outra_nome ?? l.outra_email ?? "?").slice(0, 1).toUpperCase()}
-                </span>
+                <Avatar name={l.outra_nome} email={l.outra_email} src={l.outra_avatar} size={40} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{l.outra_nome ?? "Cliente"}</span>
                   <span className="block truncate text-xs text-muted">{l.outra_email}</span>

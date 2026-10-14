@@ -6,6 +6,8 @@ import { getProfile, getUserId, isoDay, type Profile } from "@/lib/data";
 import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
 import { TrainerLinks } from "@/components/perfil/TrainerLinks";
+import { AvatarEditor } from "@/components/perfil/AvatarEditor";
+import { notifyProfileChanged } from "@/lib/avatar";
 
 const OURA_MSG: Record<string, string> = {
   ok: "Oura ligado e últimos 30 dias sincronizados.",
@@ -53,10 +55,11 @@ export default function PerfilPage() {
   const num = (s: string) => (s === "" ? null : Number(s.replace(",", ".")));
 
   async function save() {
-    const { id, ...rest } = p!;
+    const { id, avatar_url: _a, ...rest } = p!;
     const { error } = await sb.from("profiles").update(rest).eq("id", id);
     if (error) return alert(error.message);
     setSaved(true);
+    notifyProfileChanged();
   }
 
   async function addWeight() {
@@ -75,7 +78,16 @@ export default function PerfilPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <h1 className="text-xl font-semibold">Perfil e metas</h1>
+      <AvatarEditor
+        uid={p.id}
+        name={p.nome}
+        email={email}
+        src={p.avatar_url ?? null}
+        onChange={(url) => {
+          setP({ ...p, avatar_url: url });
+          notifyProfileChanged();
+        }}
+      />
 
       <section className="rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">Peso</h2>

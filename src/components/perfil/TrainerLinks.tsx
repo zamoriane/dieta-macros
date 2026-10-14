@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { myLinks, rpcError, type Link } from "@/lib/links";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { StatusBadge } from "@/components/ui/Primitives";
+import { Avatar } from "@/components/ui/Avatar";
 import { toast } from "@/components/ui/Toast";
 
 const PERMS = [
@@ -79,6 +80,7 @@ export function TrainerLinks() {
       {links.map((l) => (
         <div key={l.id} className="space-y-3 rounded-xl bg-card-2 p-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
+            <Avatar name={l.outra_nome} email={l.outra_email} src={l.outra_avatar} size={32} />
             <span className="font-semibold">{l.outra_nome ?? "Treinador"}</span>
             <StatusBadge tone={l.status === "ativo" ? "good" : "warn"}>{l.status === "ativo" ? "Ativo" : "A aguardar aceitação"}</StatusBadge>
             {l.outra_email && <span className="text-xs text-muted">{l.outra_email}</span>}

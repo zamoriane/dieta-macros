@@ -8,6 +8,7 @@ import { addDays, avgOuraActive, computeDay, getActivityDays, getClientProfile, 
 import { myLinks, type Link as TLink } from "@/lib/links";
 import { EmptyState, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
+import { Avatar } from "@/components/ui/Avatar";
 import { PlanEditor } from "@/components/plano/PlanEditor";
 import { WorkoutEditor } from "@/components/treino/WorkoutEditor";
 import { WeightChart } from "@/components/resumo/WeightChart";
@@ -93,9 +94,12 @@ export default function ClientePage() {
           <Icon name="chevronLeft" size={16} /> Clientes
         </Link>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
-            <p className="text-sm text-muted">{link.outra_email}</p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Avatar name={link.outra_nome} email={link.outra_email} src={link.outra_avatar} size={48} />
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-bold tracking-tight">{name}</h1>
+              <p className="truncate text-sm text-muted">{link.outra_email}</p>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {link.perm_dieta && <StatusBadge tone="accent">Plano alimentar</StatusBadge>}

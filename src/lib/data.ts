@@ -21,6 +21,7 @@ export type Food = {
 export type Profile = {
   id: string;
   nome: string | null;
+  avatar_url?: string | null;
   sexo: "M" | "F" | null;
   data_nascimento: string | null;
   altura_cm: number | null;

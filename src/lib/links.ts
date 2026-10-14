@@ -13,6 +13,7 @@ export type Link = {
   perm_progresso: boolean;
   criado_em: string;
   aceite_em: string | null;
+  outra_avatar?: string | null;
 };
 
 export async function myLinks(sb: SupabaseClient): Promise<Link[]> {
