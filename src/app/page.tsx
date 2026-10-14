@@ -35,13 +35,11 @@ import { MacroCard } from "@/components/hoje/MacroCard";
 import { ActivityCard } from "@/components/hoje/ActivityCard";
 import { MealCard } from "@/components/hoje/MealCard";
 import { AlertsBar } from "@/components/hoje/AlertsBar";
+import { useI18n } from "@/lib/i18n/client";
 
-const fmtLong = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long" });
-const fmtShort = (iso: string) => new Date(iso + "T12:00:00").toLocaleDateString("pt-PT", { weekday: "short", day: "numeric", month: "short" });
-
-function greeting(name?: string | null) {
+function greeting(t: ReturnType<typeof useI18n>["t"], name?: string | null) {
   const h = new Date().getHours();
-  const g = h < 12 ? "Bom dia" : h < 19 ? "Boa tarde" : "Boa noite";
+  const g = h < 12 ? t("hoje.bomDia") : h < 19 ? t("hoje.boaTarde") : t("hoje.boaNoite");
   const first = name?.trim().split(/\s+/)[0];
   return first ? `${g}, ${first}` : g;
 }
@@ -55,6 +53,9 @@ function strip(it: LogItem) {
 }
 
 export default function HojePage() {
+  const { t, df } = useI18n();
+  const fmtLong = (iso: string) => df(iso, { weekday: "long", day: "numeric", month: "long" });
+  const fmtShort = (iso: string) => df(iso, { weekday: "short", day: "numeric", month: "short" });
   const sb = useMemo(() => createClient(), []);
   const today = isoDay();
   const [dia, setDia] = useState(today);
@@ -176,11 +177,11 @@ export default function HojePage() {
   // ---------- ações ----------
   async function remove(it: LogItem) {
     const { error: e } = await sb.from("log_items").delete().eq("id", it.id);
-    if (e) return toast("Não foi possível remover", { kind: "erro" });
+    if (e) return toast(t("hoje.erroRemover"), { kind: "erro" });
     await load();
-    toast(`${it.food_name} removido`, {
+    toast(t("hoje.removido", { nome: it.food_name }), {
       action: {
-        label: "Desfazer",
+        label: t("comum.desfazer"),
         run: async () => {
           const userId = await getUserId(sb);
           await sb.from("log_items").insert({ ...strip(it), user_id: userId });
@@ -203,9 +204,9 @@ export default function HojePage() {
       await updateLogGrams(sb, editing, g);
       setEditing(null);
       await load();
-      toast("Quantidade atualizada");
+      toast(t("hoje.qtdAtualizada"));
     } catch {
-      toast("Não foi possível guardar", { kind: "erro" });
+      toast(t("comum.erroGuardar"), { kind: "erro" });
     }
   }
 
@@ -215,16 +216,16 @@ export default function HojePage() {
     await ensureDay(sb, dia, false);
     const userId = await getUserId(sb);
     const { error: e } = await sb.from("log_items").insert(src.map((y) => ({ ...strip(y), user_id: userId, dia, refeicao_pos: pos })));
-    if (e) return toast("Não foi possível copiar", { kind: "erro" });
+    if (e) return toast(t("hoje.erroCopiar"), { kind: "erro" });
     await load();
-    toast(`${meal} copiado de ontem`);
+    toast(t("hoje.copiadoOntem", { nome: meal }));
   }
 
   async function fillFromPlan() {
     await ensureDay(sb, dia, false);
     const n = await applyPlanToDay(sb, dia);
     await load();
-    toast(`Plano aplicado (${n} alimentos)`);
+    toast(t("hoje.planoAplicado", { n }));
   }
 
   function createMeal() {
@@ -252,12 +253,12 @@ export default function HojePage() {
     <div className="space-y-5">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">{isToday ? greeting(profile?.nome) : "Registo do dia"}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{isToday ? greeting(t, profile?.nome) : t("hoje.registoDia")}</h1>
           <p className="text-sm text-muted first-letter:uppercase">{fmtLong(dia)}</p>
         </div>
         <div className="card px-1 py-1">
           <DateNavigator
-            label={isToday ? "Hoje" : fmtShort(dia)}
+            label={isToday ? t("comum.hoje") : fmtShort(dia)}
             onPrev={() => setDia(addDays(dia, -1))}
             onNext={() => setDia(addDays(dia, 1))}
             nextDisabled={dia >= today}
@@ -272,7 +273,7 @@ export default function HojePage() {
           <Icon name="alert" size={18} className="text-bad" />
           <span className="flex-1">{error}</span>
           <button className="font-semibold text-accent" onClick={load}>
-            Tentar de novo
+            {t("comum.tentarDeNovo")}
           </button>
         </div>
       )}
@@ -281,9 +282,9 @@ export default function HojePage() {
 
       {!loading && items.length === 0 && planItemCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm">
-          <span className="font-medium">{dayExists ? "Este dia está vazio." : "Sem registo neste dia."}</span>
+          <span className="font-medium">{dayExists ? t("hoje.diaVazio") : t("hoje.semRegisto")}</span>
           <button className="btn btn-primary !min-h-10" onClick={fillFromPlan}>
-            <Icon name="plan" size={18} /> Aplicar plano base
+            <Icon name="plan" size={18} /> {t("hoje.aplicarPlano")}
           </button>
         </div>
       )}
@@ -319,19 +320,19 @@ export default function HojePage() {
 
           <div className="min-w-0 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Refeições</h2>
+              <h2 className="text-lg font-semibold">{t("hoje.refeicoes")}</h2>
               <button className="btn btn-ghost !min-h-10 !px-3" onClick={() => setNewMealOpen(true)}>
-                <Icon name="plus" size={18} /> Refeição
+                <Icon name="plus" size={18} /> {t("hoje.refeicao")}
               </button>
             </div>
 
             {mealList.length === 0 && !loading && (
-              <EmptyState icon="plan" title="Ainda não há refeições">
-                Monte o seu plano base em{" "}
+              <EmptyState icon="plan" title={t("hoje.semRefeicoes")}>
+                {t("hoje.monteO")}{" "}
                 <Link className="font-medium text-accent" href="/plano">
-                  Plano
+                  {t("nav.plano")}
                 </Link>
-                , ou adicione uma refeição aqui.
+                {t("hoje.ouAdicione")}
               </EmptyState>
             )}
 
@@ -353,12 +354,12 @@ export default function HojePage() {
 
       {picker && (
         <FoodPicker
-          title={`Adicionar a ${picker.meal}`}
+          title={t("hoje.adicionarA", { nome: picker.meal })}
           onClose={() => setPicker(null)}
           onPick={async (food, grams) => {
             await addLogItem(sb, dia, picker.meal, picker.pos, food, grams);
             await load();
-            toast(`${food.name} adicionado a ${picker.meal}`);
+            toast(t("hoje.adicionadoA", { alimento: food.name, nome: picker.meal }));
           }}
         />
       )}
@@ -370,10 +371,10 @@ export default function HojePage() {
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setEditing(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" onClick={saveEdit}>
-              Guardar
+              {t("comum.guardar")}
             </button>
           </>
         }
@@ -383,7 +384,7 @@ export default function HojePage() {
             <GramsInput value={editGrams} onChange={setEditGrams} />
             {editing.gramas_plano != null && Number(editing.gramas_plano) !== eg && (
               <button className="btn btn-ghost w-full !min-h-10 !text-xs" onClick={() => setEditGrams(String(Number(editing.gramas_plano)))}>
-                Repor quantidade do plano ({Number(editing.gramas_plano)} g)
+                {t("hoje.reporPlano", { g: Number(editing.gramas_plano) })}
               </button>
             )}
             {editPreview && <MacroPreview m={editPreview} />}
@@ -393,20 +394,20 @@ export default function HojePage() {
 
       <ResponsiveDialog
         open={newMealOpen}
-        title="Nova refeição"
+        title={t("hoje.novaRefeicao")}
         onClose={() => setNewMealOpen(false)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setNewMealOpen(false)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!newMealName.trim()} onClick={createMeal}>
-              Continuar
+              {t("comum.continuar")}
             </button>
           </>
         }
       >
-        <FormField label="Nome" hint="Ex.: Ceia, Pré-treino. Fica só neste dia; para todos os dias, crie-a no Plano.">
+        <FormField label={t("comum.nome")} hint={t("hoje.novaRefeicaoDica")}>
           <input
             data-autofocus
             className="w-full"

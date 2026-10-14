@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { Icon } from "./Icon";
+import { useI18n } from "@/lib/i18n/client";
 
 /**
  * Diálogo responsivo: bottom sheet no telemóvel, modal centrado no desktop.
@@ -21,6 +22,7 @@ export function ResponsiveDialog({
   footer?: React.ReactNode;
   wide?: boolean;
 }) {
+  const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -59,7 +61,7 @@ export function ResponsiveDialog({
         <div className="mx-auto mt-2 h-1.5 w-10 rounded-full bg-line sm:hidden" aria-hidden="true" />
         <div className="flex items-center gap-2 px-5 pb-2 pt-3 sm:pt-4">
           <h2 className="min-w-0 flex-1 truncate text-base font-semibold">{title}</h2>
-          <button className="icon-btn -mr-2" onClick={onClose} aria-label="Fechar">
+          <button className="icon-btn -mr-2" onClick={onClose} aria-label={t("comum.fechar")}>
             <Icon name="x" />
           </button>
         </div>

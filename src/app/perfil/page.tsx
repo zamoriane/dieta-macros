@@ -8,15 +8,18 @@ import { toast } from "@/components/ui/Toast";
 import { TrainerLinks } from "@/components/perfil/TrainerLinks";
 import { AvatarEditor } from "@/components/perfil/AvatarEditor";
 import { notifyProfileChanged } from "@/lib/avatar";
+import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/core";
 
-const OURA_MSG: Record<string, string> = {
-  ok: "Oura ligado e últimos 30 dias sincronizados.",
-  cancelado: "Ligação ao Oura cancelada.",
-  "estado-invalido": "A ligação expirou. Tente de novo.",
-  erro: "Erro ao ligar ao Oura. Verifique as variáveis OURA_* na Vercel.",
+const OURA_MSG: Record<string, MessageKey> = {
+  ok: "perfil.oura.ok",
+  cancelado: "perfil.oura.cancelado",
+  "estado-invalido": "perfil.oura.expirou",
+  erro: "perfil.oura.erro",
 };
 
 export default function PerfilPage() {
+  const { t, df } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [p, setP] = useState<Profile | null>(null);
   const [saved, setSaved] = useState(false);
@@ -44,7 +47,7 @@ export default function PerfilPage() {
   useEffect(() => {
     load();
     const s = new URLSearchParams(location.search).get("oura");
-    if (s) setOuraMsg(OURA_MSG[s] ?? s);
+    if (s) setOuraMsg(OURA_MSG[s] ? t(OURA_MSG[s]) : s);
   }, [load]);
 
   if (!p) return null;
@@ -55,7 +58,8 @@ export default function PerfilPage() {
   const num = (s: string) => (s === "" ? null : Number(s.replace(",", ".")));
 
   async function save() {
-    const { id, avatar_url: _a, ...rest } = p!;
+    // avatar e idioma têm as suas próprias gravações; não os sobrescrever com valores antigos
+    const { id, avatar_url: _a, idioma: _i, ...rest } = p as Profile & { idioma?: string };
     const { error } = await sb.from("profiles").update(rest).eq("id", id);
     if (error) return alert(error.message);
     setSaved(true);
@@ -90,19 +94,19 @@ export default function PerfilPage() {
       />
 
       <section className="rounded-2xl border border-line bg-card p-4">
-        <h2 className="font-medium">Peso</h2>
-        <p className="text-xs text-muted">Idealmente todos os dias, de manhã, em jejum. O app usa a tendência, não o valor isolado.</p>
+        <h2 className="font-medium">{t("perfil.peso")}</h2>
+        <p className="text-xs text-muted">{t("perfil.pesoDica")}</p>
         <div className="mt-3 flex gap-2">
           <input inputMode="decimal" className="tabular w-32" placeholder="kg" value={kg} onChange={(e) => setKg(e.target.value)} />
           <button className="rounded-xl bg-accent px-4 text-on-accent" onClick={addWeight}>
-            Registar hoje
+            {t("perfil.registarHoje")}
           </button>
         </div>
         {weights.length > 0 && (
           <ul className="tabular mt-3 flex flex-wrap gap-2 text-xs text-muted">
             {weights.map((w) => (
               <li key={w.dia} className="rounded-full border border-line px-2 py-0.5">
-                {new Date(w.dia + "T12:00:00").toLocaleDateString("pt-PT", { day: "numeric", month: "short" })}: {w.kg.toFixed(1)}
+                {df(w.dia, { day: "numeric", month: "short" })}: {w.kg.toFixed(1)}
               </li>
             ))}
           </ul>
@@ -110,57 +114,57 @@ export default function PerfilPage() {
       </section>
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
-        <h2 className="font-medium">Dados para o cálculo do basal</h2>
+        <h2 className="font-medium">{t("perfil.dadosBasal")}</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Nome">
+          <Field label={t("comum.nome")}>
             <input className="w-full" value={p.nome ?? ""} onChange={(e) => set("nome", e.target.value)} />
           </Field>
-          <Field label="Sexo">
+          <Field label={t("perfil.sexo")}>
             <select className="w-full" value={p.sexo ?? ""} onChange={(e) => set("sexo", (e.target.value || null) as Profile["sexo"])}>
               <option value="">—</option>
-              <option value="M">Masculino</option>
-              <option value="F">Feminino</option>
+              <option value="M">{t("perfil.masculino")}</option>
+              <option value="F">{t("perfil.feminino")}</option>
             </select>
           </Field>
-          <Field label="Data de nascimento">
+          <Field label={t("perfil.nascimento")}>
             <input type="date" className="w-full" value={p.data_nascimento ?? ""} onChange={(e) => set("data_nascimento", e.target.value || null)} />
           </Field>
-          <Field label="Altura (cm)">
+          <Field label={t("perfil.altura")}>
             <input inputMode="decimal" className="w-full" value={p.altura_cm ?? ""} onChange={(e) => set("altura_cm", num(e.target.value))} />
           </Field>
         </div>
         {bmr && (
           <p className="tabular text-sm">
-            Basal estimado (Mifflin-St Jeor): <strong>{bmr} kcal/dia</strong>
+            {t("perfil.basalEstimado")} <strong>{t("perfil.kcalDia", { kcal: bmr })}</strong>
           </p>
         )}
       </section>
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
-        <h2 className="font-medium">Metas</h2>
+        <h2 className="font-medium">{t("perfil.metas")}</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Défice diário alvo (kcal)" hint="500 ≈ 0,5 kg/semana">
+          <Field label={t("perfil.deficeAlvo")} hint={t("perfil.deficeAlvoDica")}>
             <input inputMode="numeric" className="w-full" value={p.deficit_alvo_kcal} onChange={(e) => set("deficit_alvo_kcal", Number(e.target.value) || 0)} />
           </Field>
-          <Field label="Peso meta (kg)" hint="o peso final desejado, não quanto perder">
+          <Field label={t("perfil.pesoMeta")} hint={t("perfil.pesoMetaDica")}>
             <input inputMode="decimal" className="w-full" value={p.peso_meta_kg ?? ""} onChange={(e) => set("peso_meta_kg", num(e.target.value))} />
           </Field>
-          <Field label="Proteína (g por kg)" hint="1,6–2,2 em défice; usa o peso meta se definido">
+          <Field label={t("perfil.proteinaKg")} hint={t("perfil.proteinaKgDica")}>
             <input inputMode="decimal" className="w-full" value={p.proteina_g_kg} onChange={(e) => set("proteina_g_kg", num(e.target.value) ?? 1.8)} />
           </Field>
-          <Field label="Gordura (% das kcal)">
+          <Field label={t("perfil.gorduraPct")}>
             <input inputMode="numeric" className="w-full" value={p.gordura_pct} onChange={(e) => set("gordura_pct", Number(e.target.value) || 25)} />
           </Field>
-          <Field label="Mínimo diário (kcal)" hint="alerta se ficar abaixo 3 dias">
+          <Field label={t("perfil.minimo")} hint={t("perfil.minimoDica")}>
             <input inputMode="numeric" className="w-full" value={p.kcal_minimo} onChange={(e) => set("kcal_minimo", Number(e.target.value) || 1500)} />
           </Field>
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
-        <h2 className="font-medium">Cálculo da atividade</h2>
+        <h2 className="font-medium">{t("perfil.calcAtividade")}</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Correção sobre o Oura" hint="0,85 = conta 85% das calorias ativas">
+          <Field label={t("perfil.correcao")} hint={t("perfil.correcaoDica")}>
             <input
               inputMode="decimal"
               className="w-full"
@@ -168,7 +172,7 @@ export default function PerfilPage() {
               onChange={(e) => set("fator_correcao_atividade", num(e.target.value) ?? 0.85)}
             />
           </Field>
-          <Field label="Fator sem Oura" hint="1,2 sedentário · 1,4 ativo">
+          <Field label={t("perfil.fatorSemOura")} hint={t("perfil.fatorSemOuraDica")}>
             <input
               inputMode="decimal"
               className="w-full"
@@ -180,12 +184,12 @@ export default function PerfilPage() {
       </section>
 
       <button className="w-full rounded-xl bg-accent py-3 font-medium text-on-accent" onClick={save}>
-        {saved ? "Guardado ✓" : "Guardar perfil"}
+        {saved ? t("perfil.guardado") : t("perfil.guardar")}
       </button>
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
         <h2 className="font-medium">Apple Watch (Health Auto Export)</h2>
-        <Field label="Fonte das calorias ativas" hint="sono, prontidão e stress continuam a vir do Oura">
+        <Field label={t("perfil.fonteKcal")} hint={t("perfil.fonteKcalDica")}>
           <select className="w-full" value={p.fonte_atividade ?? "oura"} onChange={(e) => set("fonte_atividade", e.target.value as Profile["fonte_atividade"])}>
             <option value="oura">Oura</option>
             <option value="apple">Apple Watch</option>
@@ -193,41 +197,44 @@ export default function PerfilPage() {
         </Field>
         {p.ingest_token ? (
           <div className="space-y-2 text-sm">
-            <Copyable label="URL" value={`${location.origin}/api/ingest/apple-health`} copied={copied} setCopied={setCopied} />
-            <Copyable label="Header Authorization" value={`Bearer ${p.ingest_token}`} copied={copied} setCopied={setCopied} />
+            <Copyable t={t} label="URL" value={`${location.origin}/api/ingest/apple-health`} copied={copied} setCopied={setCopied} />
+            <Copyable t={t} label="Header Authorization" value={`Bearer ${p.ingest_token}`} copied={copied} setCopied={setCopied} />
             <button
               className="text-xs text-muted underline"
               onClick={async () => {
-                if (!confirm("Gerar um token novo? O antigo deixa de funcionar e terá de atualizar a app no iPhone.")) return;
-                const t = newToken();
-                await sb.from("profiles").update({ ingest_token: t }).eq("id", p.id);
-                set("ingest_token", t);
+                if (!confirm(t("perfil.tokenNovoConfirm"))) return;
+                const tok = newToken();
+                await sb.from("profiles").update({ ingest_token: tok }).eq("id", p.id);
+                set("ingest_token", tok);
               }}
             >
-              Gerar token novo
+              {t("perfil.tokenNovo")}
             </button>
           </div>
         ) : (
           <button
             className="rounded-xl border border-line px-4 py-2 text-sm"
             onClick={async () => {
-              const t = newToken();
-              const { error } = await sb.from("profiles").update({ ingest_token: t }).eq("id", p.id);
+              const tok = newToken();
+              const { error } = await sb.from("profiles").update({ ingest_token: tok }).eq("id", p.id);
               if (error) return alert(error.message);
-              set("ingest_token", t);
+              set("ingest_token", tok);
             }}
           >
-            Gerar token de envio
+            {t("perfil.gerarToken")}
           </button>
         )}
         <p className="text-xs text-muted">
           {lastIngest
-            ? `Último envio: ${new Date(lastIngest.recebido_em).toLocaleString("pt-PT")} · dias ${lastIngest.resumo.dias?.join(", ") || "–"} · métricas: ${
-                lastIngest.resumo.metricas?.join(", ") || "nenhuma"
-              }${lastIngest.resumo.treinos ? ` · ${lastIngest.resumo.treinos} treinos` : ""}${
-                lastIngest.resumo.erro ? ` · ERRO: ${lastIngest.resumo.erro}` : ""
-              } · ${Math.round(((lastIngest as { bytes?: number }).bytes ?? 0) / 1024)} KB`
-            : "Ainda não chegou nenhum envio do iPhone."}
+            ? t("perfil.ultimoEnvio", {
+                quando: df(new Date(lastIngest.recebido_em), { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+                dias: lastIngest.resumo.dias?.join(", ") || "–",
+                metricas: lastIngest.resumo.metricas?.join(", ") || t("perfil.nenhuma"),
+              }) +
+              (lastIngest.resumo.treinos ? ` · ${t("perfil.nTreinos", { n: lastIngest.resumo.treinos })}` : "") +
+              (lastIngest.resumo.erro ? ` · ${t("perfil.erroEnvio", { erro: lastIngest.resumo.erro })}` : "") +
+              ` · ${Math.round(((lastIngest as { bytes?: number }).bytes ?? 0) / 1024)} KB`
+            : t("perfil.semEnvio")}
         </p>
       </section>
 
@@ -240,7 +247,7 @@ export default function PerfilPage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent">
             <Icon name="users" size={18} />
           </span>
-          Os meus clientes
+          {t("perfil.meusClientes")}
           <Icon name="chevronRight" size={16} className="ml-auto text-muted" />
         </a>
       )}
@@ -250,7 +257,7 @@ export default function PerfilPage() {
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-soft text-accent">
             <Icon name="gauge" size={18} />
           </span>
-          Administração — utilizadores e treinadores
+          {t("perfil.adminLink")}
           <Icon name="chevronRight" size={16} className="ml-auto text-muted" />
         </a>
       )}
@@ -259,25 +266,29 @@ export default function PerfilPage() {
         <h2 className="font-medium">Oura</h2>
         {ouraMsg && <p className="mt-1 text-sm">{ouraMsg}</p>}
         <p className="mt-1 text-sm text-muted">
-          {ouraLinked ? "Ligado. Os dados sincronizam ao abrir o app e todas as manhãs." : "Ligue a sua conta para trazer calorias ativas, sono, prontidão e stress."}
+          {ouraLinked ? t("perfil.ouraLigado") : t("perfil.ouraLigue")}
         </p>
         <a href="/api/oura/connect" className="mt-3 inline-block rounded-xl border border-line px-4 py-2 text-sm">
-          {ouraLinked ? "Voltar a ligar" : "Ligar ao Oura"}
+          {ouraLinked ? t("perfil.ouraReligar") : t("perfil.ouraLigar")}
         </a>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
         <div>
-          <h2 className="font-medium">Conta e segurança</h2>
+          <h2 className="font-medium">{t("perfil.conta")}</h2>
           <p className="text-sm text-muted">{email}</p>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span>{t("lang.label")}</span>
+          <LanguageSwitch />
         </div>
         <div className="flex flex-wrap gap-2">
           <a href="/nova-senha" className="btn btn-ghost">
-            Alterar palavra-passe
+            {t("nav.alterarPassword")}
           </a>
           <form action="/auth/signout" method="post">
             <button type="submit" className="btn btn-ghost !text-bad">
-              Sair (terminar sessão)
+              {t("perfil.sair")}
             </button>
           </form>
         </div>
@@ -302,7 +313,19 @@ function newToken() {
   return "dm_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function Copyable({ label, value, copied, setCopied }: { label: string; value: string; copied: string | null; setCopied: (v: string | null) => void }) {
+function Copyable({
+  t,
+  label,
+  value,
+  copied,
+  setCopied,
+}: {
+  t: ReturnType<typeof useI18n>["t"];
+  label: string;
+  value: string;
+  copied: string | null;
+  setCopied: (v: string | null) => void;
+}) {
   return (
     <div>
       <div className="text-xs text-muted">{label}</div>
@@ -318,7 +341,7 @@ function Copyable({ label, value, copied, setCopied }: { label: string; value: s
             } catch {}
           }}
         >
-          {copied === label ? "Copiado ✓" : "Copiar"}
+          {copied === label ? t("comum.copiado") : t("comum.copiar")}
         </button>
       </div>
     </div>
@@ -336,6 +359,7 @@ function TrainerSection({
   onChange: () => void;
   sb: ReturnType<typeof createClient>;
 }) {
+  const { t, df } = useI18n();
   const [want, setWant] = useState(false);
   const [contact, setContact] = useState(p.pt_contacto_email || email);
   const [busy, setBusy] = useState(false);
@@ -350,18 +374,18 @@ function TrainerSection({
       .eq("id", p.id);
     setBusy(false);
     if (error) return toast(error.message, { kind: "erro" });
-    toast(pt_estado ? "Pedido enviado ao administrador" : "Pedido cancelado");
+    toast(pt_estado ? t("pt.pedidoEnviado") : t("pt.pedidoCancelado"));
     setWant(false);
     onChange();
   }
 
   return (
     <section className="space-y-3 rounded-2xl border border-line bg-card p-4">
-      <h2 className="font-medium">Perfil Treinador (PT)</h2>
+      <h2 className="font-medium">{t("pt.titulo")}</h2>
 
       {p.pt_estado === "aprovado" && p.trainer_code ? (
         <div className="space-y-2 text-sm">
-          <p className="text-muted">O seu Perfil Treinador está ativo. Partilhe este código com os seus clientes para eles se ligarem a si.</p>
+          <p className="text-muted">{t("pt.ativo")}</p>
           <div className="flex items-center gap-2">
             <code className="rounded-xl bg-accent-soft px-4 py-2 text-xl font-bold tracking-widest text-accent">{p.trainer_code}</code>
             <button
@@ -374,42 +398,39 @@ function TrainerSection({
                 } catch {}
               }}
             >
-              {copied ? "Copiado ✓" : "Copiar"}
+              {copied ? t("comum.copiado") : t("comum.copiar")}
             </button>
           </div>
         </div>
       ) : p.pt_estado === "pendente" ? (
         <div className="space-y-2 text-sm">
           <p>
-            Pedido enviado{p.pt_pedido_em ? ` em ${new Date(p.pt_pedido_em).toLocaleDateString("pt-PT")}` : ""}. Aguarda aprovação do administrador.
+            {p.pt_pedido_em ? t("pt.pendenteEm", { data: df(new Date(p.pt_pedido_em), { day: "numeric", month: "short", year: "numeric" }) }) : t("pt.pendente")}
           </p>
-          <p className="text-xs text-muted">Contacto indicado: {p.pt_contacto_email}</p>
+          <p className="text-xs text-muted">{t("pt.contactoIndicado", { email: p.pt_contacto_email ?? "" })}</p>
           <button className="btn btn-ghost !min-h-10" disabled={busy} onClick={() => setEstado(null)}>
-            Cancelar pedido
+            {t("pt.cancelarPedido")}
           </button>
         </div>
       ) : (
         <div className="space-y-3 text-sm">
-          {p.pt_estado === "recusado" && <p className="rounded-xl bg-card-2 p-3 text-muted">O pedido anterior não foi aprovado. Pode voltar a pedir.</p>}
+          {p.pt_estado === "recusado" && <p className="rounded-xl bg-card-2 p-3 text-muted">{t("pt.recusado")}</p>}
           <label className="flex items-start gap-3">
             <input type="checkbox" className="mt-0.5 h-5 w-5 !min-h-0 accent-[var(--accent)]" checked={want} onChange={(e) => setWant(e.target.checked)} />
             <span>
-              <span className="font-medium">Quero ativar o Perfil Treinador (PT)</span>
-              <span className="block text-xs text-muted">
-                Sujeito a aprovação do administrador. Com o perfil ativo, recebe um código único e os seus clientes podem dar-lhe acesso para criar o
-                plano alimentar e de treino deles.
-              </span>
+              <span className="font-medium">{t("pt.quero")}</span>
+              <span className="block text-xs text-muted">{t("pt.queroDica")}</span>
             </span>
           </label>
           {want && (
             <div className="space-y-2 pl-8">
               <label className="block">
-                <span className="text-xs font-medium">Email de contacto</span>
+                <span className="text-xs font-medium">{t("pt.emailContacto")}</span>
                 <input type="email" className="mt-1 w-full" value={contact} onChange={(e) => setContact(e.target.value)} />
-                {!validEmail && contact && <span className="mt-1 block text-xs text-bad">Indique um email válido.</span>}
+                {!validEmail && contact && <span className="mt-1 block text-xs text-bad">{t("pt.emailInvalido")}</span>}
               </label>
               <button className="btn btn-primary" disabled={busy || !validEmail} onClick={() => setEstado("pendente")}>
-                Enviar pedido
+                {t("pt.enviarPedido")}
               </button>
             </div>
           )}

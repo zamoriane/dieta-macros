@@ -1,4 +1,6 @@
+"use client";
 import { Icon, type IconName } from "./Icon";
+import { useI18n } from "@/lib/i18n/client";
 
 export function SectionCard({
   title,
@@ -59,7 +61,8 @@ export function StatusBadge({ tone = "neutral", icon, children }: { tone?: Tone;
 
 /** Selo da origem de um dado (Oura / Apple Watch / estimativa). */
 export function SourceBadge({ source }: { source: "oura" | "apple" | "estim" }) {
-  const label = source === "oura" ? "Oura" : source === "apple" ? "Watch" : "Estim.";
+  const { t } = useI18n();
+  const label = source === "oura" ? "Oura" : source === "apple" ? "Watch" : t("comum.estimado");
   return (
     <span className="rounded-md border border-line px-1.5 py-px text-[10px] font-medium uppercase tracking-wide text-muted">{label}</span>
   );
@@ -135,21 +138,22 @@ export function DateNavigator({
   onToday?: () => void;
   isToday?: boolean;
 }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-1">
-      <button className="icon-btn" onClick={onPrev} aria-label="Dia anterior">
+      <button className="icon-btn" onClick={onPrev} aria-label={t("comum.diaAnterior")}>
         <Icon name="chevronLeft" />
       </button>
       <div className="min-w-0 flex-1 text-center sm:flex-none sm:px-2">
         <div className="truncate text-sm font-semibold capitalize">{label}</div>
         {sublabel && <div className="truncate text-xs capitalize text-muted">{sublabel}</div>}
       </div>
-      <button className="icon-btn" onClick={onNext} disabled={nextDisabled} aria-label="Dia seguinte" style={nextDisabled ? { opacity: 0.3 } : undefined}>
+      <button className="icon-btn" onClick={onNext} disabled={nextDisabled} aria-label={t("comum.diaSeguinte")} style={nextDisabled ? { opacity: 0.3 } : undefined}>
         <Icon name="chevronRight" />
       </button>
       {!isToday && onToday && (
         <button className="btn btn-ghost ml-1 !min-h-9 !px-3 text-xs" onClick={onToday}>
-          Hoje
+          {t("comum.hoje")}
         </button>
       )}
     </div>

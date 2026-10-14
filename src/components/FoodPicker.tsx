@@ -6,6 +6,7 @@ import { addDays, getUserId, isoDay, me, type Food } from "@/lib/data";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { Icon } from "@/components/ui/Icon";
 import { FormField } from "@/components/ui/Primitives";
+import { useI18n } from "@/lib/i18n/client";
 
 type Props = {
   title?: string;
@@ -14,7 +15,8 @@ type Props = {
 };
 
 /** Pesquisa e adição de alimentos: recentes, pesquisa (base local + Calorie API), alimento próprio. */
-export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Props) {
+export function FoodPicker({ title, onPick, onClose }: Props) {
+  const { t } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [q, setQ] = useState("");
   const [foods, setFoods] = useState<Food[]>([]);
@@ -89,7 +91,7 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
     }
   }
 
-  const dialogTitle = selected ? selected.name : creating ? "Novo alimento" : title;
+  const dialogTitle = selected ? selected.name : creating ? t("food.novo") : title ?? t("refeicao.adicionarAlimento");
 
   if (creating) {
     return (
@@ -117,17 +119,17 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setSelected(null)}>
-              Voltar
+              {t("comum.voltar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!(g > 0) || saving} onClick={confirm}>
-              {saving ? "A adicionar…" : "Adicionar"}
+              {saving ? t("comum.aAdicionar") : t("comum.adicionar")}
             </button>
           </>
         }
       >
         <div className="space-y-4">
           <p className="text-xs text-muted">
-            {Math.round(Number(selected.kcal_100g))} kcal por 100 g{selected.brand ? ` · ${selected.brand}` : ""}
+            {t("food.kcalPor100", { kcal: Math.round(Number(selected.kcal_100g)) })}{selected.brand ? ` · ${selected.brand}` : ""}
           </p>
           <GramsInput value={grams} onChange={setGrams} />
           {selected.portions?.length > 0 && (
@@ -154,18 +156,18 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
           <input
             data-autofocus
             className="w-full !pl-10"
-            placeholder="Pesquisar (ex.: oats, egg, chicken breast)"
+            placeholder={t("food.pesquisarPh")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            aria-label="Pesquisar alimento"
+            aria-label={t("food.pesquisar")}
           />
         </div>
-        <p className="mt-1.5 text-xs text-muted">A base é sobretudo em inglês. Os alimentos que usa ficam guardados e aparecem em “Recentes”.</p>
+        <p className="mt-1.5 text-xs text-muted">{t("food.dica")}</p>
       </div>
 
       {q.trim().length < 2 && recent.length > 0 && (
         <h3 className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-          <Icon name="clock" size={14} /> Recentes
+          <Icon name="clock" size={14} /> {t("food.recentes")}
         </h3>
       )}
 
@@ -183,10 +185,10 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">
                     {f.name}
-                    {f.source === "custom" && <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-px text-[10px] font-semibold text-accent">MEU</span>}
+                    {f.source === "custom" && <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-px text-[10px] font-semibold text-accent">{t("food.meu")}</span>}
                   </div>
                   <div className="tabular mt-0.5 text-xs text-muted">
-                    {f.brand ? `${f.brand} · ` : ""}P {f.protein_100g} · C {f.carbs_100g} · G {f.fat_100g} <span className="opacity-70">/100 g</span>
+                    {f.brand ? `${f.brand} · ` : ""}{t("macro.p")} {f.protein_100g} · {t("macro.c")} {f.carbs_100g} · {t("macro.g")} {f.fat_100g} <span className="opacity-70">/100 g</span>
                   </div>
                 </div>
                 <div className="tabular shrink-0 text-right text-sm font-semibold">
@@ -199,22 +201,23 @@ export function FoodPicker({ title = "Adicionar alimento", onPick, onClose }: Pr
         </ul>
       )}
 
-      {!loading && q.trim().length >= 2 && foods.length === 0 && <p className="py-6 text-center text-sm text-muted">Nada encontrado para “{q}”.</p>}
+      {!loading && q.trim().length >= 2 && foods.length === 0 && <p className="py-6 text-center text-sm text-muted">{t("food.nada", { q })}</p>}
       {err && <p className="mt-2 text-xs text-warn">{err}</p>}
 
       <button className="btn btn-ghost mt-4 w-full" onClick={() => setCreating(true)}>
-        <Icon name="plus" size={18} /> Criar alimento próprio
+        <Icon name="plus" size={18} /> {t("food.criarProprio")}
       </button>
     </ResponsiveDialog>
   );
 }
 
 export function GramsInput({ value, onChange, step = 10 }: { value: string; onChange: (v: string) => void; step?: number }) {
+  const { t } = useI18n();
   const n = Number(value.replace(",", ".")) || 0;
   const bump = (d: number) => onChange(String(Math.max(0, Math.round((n + d) * 10) / 10)));
   return (
     <div className="flex items-center gap-2">
-      <button className="icon-btn border border-line" onClick={() => bump(-step)} aria-label={`Menos ${step} g`}>
+      <button className="icon-btn border border-line" onClick={() => bump(-step)} aria-label={t("food.menosG", { g: step })}>
         <Icon name="minus" />
       </button>
       <div className="relative flex-1">
@@ -224,11 +227,11 @@ export function GramsInput({ value, onChange, step = 10 }: { value: string; onCh
           className="tabular w-full text-center !text-2xl font-semibold"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          aria-label="Quantidade em gramas"
+          aria-label={t("food.qtdGramas")}
         />
         <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted">g</span>
       </div>
-      <button className="icon-btn border border-line" onClick={() => bump(step)} aria-label={`Mais ${step} g`}>
+      <button className="icon-btn border border-line" onClick={() => bump(step)} aria-label={t("food.maisG", { g: step })}>
         <Icon name="plus" />
       </button>
     </div>
@@ -236,11 +239,12 @@ export function GramsInput({ value, onChange, step = 10 }: { value: string; onCh
 }
 
 export function MacroPreview({ m }: { m: { kcal: number; protein: number; carbs: number; fat: number } }) {
+  const { t } = useI18n();
   const cells = [
     { label: "kcal", v: Math.round(m.kcal), c: "text-ink" },
-    { label: "Proteína", v: m.protein, c: "text-prot-ink" },
-    { label: "Carb.", v: m.carbs, c: "text-carb-ink" },
-    { label: "Gordura", v: m.fat, c: "text-fat-ink" },
+    { label: t("macro.proteina"), v: m.protein, c: "text-prot-ink" },
+    { label: t("macro.hidratosCurto"), v: m.carbs, c: "text-carb-ink" },
+    { label: t("macro.gordura"), v: m.fat, c: "text-fat-ink" },
   ];
   return (
     <div className="tabular grid grid-cols-4 gap-2 text-center">
@@ -265,13 +269,14 @@ function CustomFoodForm({
   onCancel: () => void;
   onCreated: (f: Food) => void;
 }) {
+  const { t } = useI18n();
   const [f, setF] = useState({ name: initialName, kcal: "", p: "", c: "", g: "", fib: "" });
   const [err, setErr] = useState<string | null>(null);
   const n = (s: string) => Number(s.replace(",", ".")) || 0;
 
   async function save() {
-    if (!f.name.trim()) return setErr("Indique o nome.");
-    if (!(n(f.kcal) > 0)) return setErr("Indique as kcal por 100 g.");
+    if (!f.name.trim()) return setErr(t("food.errNome"));
+    if (!(n(f.kcal) > 0)) return setErr(t("food.errKcal"));
     const userId = await getUserId(sb);
     const { data, error } = await sb
       .from("foods")
@@ -299,24 +304,24 @@ function CustomFoodForm({
 
   return (
     <div className="space-y-4">
-      <FormField label="Nome">
+      <FormField label={t("comum.nome")}>
         <input data-autofocus className="w-full" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
       </FormField>
-      <p className="text-xs text-muted">Valores por 100 g, tal como no rótulo da embalagem.</p>
+      <p className="text-xs text-muted">{t("food.valoresRotulo")}</p>
       <div className="grid grid-cols-2 gap-3">
         {field("kcal", "kcal")}
-        {field("p", "Proteína (g)")}
-        {field("c", "Carboidratos (g)")}
-        {field("g", "Gordura (g)")}
-        {field("fib", "Fibra (g)")}
+        {field("p", `${t("macro.proteina")} (g)`)}
+        {field("c", `${t("macro.hidratos")} (g)`)}
+        {field("g", `${t("macro.gordura")} (g)`)}
+        {field("fib", `${t("macro.fibra")} (g)`)}
       </div>
       {err && <p className="text-sm text-bad">{err}</p>}
       <div className="flex gap-2 pt-1">
         <button className="btn btn-ghost flex-1" onClick={onCancel}>
-          Cancelar
+          {t("comum.cancelar")}
         </button>
         <button className="btn btn-primary flex-1" onClick={save}>
-          Guardar
+          {t("comum.guardar")}
         </button>
       </div>
     </div>

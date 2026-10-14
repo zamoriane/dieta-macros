@@ -5,8 +5,10 @@ import { ZERO, type Targets } from "@/lib/nutrition";
 import { avgOuraActive, computeDay, getProfile, isoDay, latestWeight } from "@/lib/data";
 import { PageHeader, Skeleton } from "@/components/ui/Primitives";
 import { PlanEditor } from "@/components/plano/PlanEditor";
+import { useI18n } from "@/lib/i18n/client";
 
 export default function PlanoPage() {
+  const { t } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [uid, setUid] = useState<string | null>(null);
   const [targets, setTargets] = useState<Targets | null>(null);
@@ -26,7 +28,7 @@ export default function PlanoPage() {
       setTargets(calc?.targets ?? null);
       const n: Record<string, string> = {};
       for (const l of (links ?? []) as { outra_id: string; outra_nome: string | null; papel: string }[]) {
-        n[l.outra_id] = `${l.outra_nome ?? "Treinador"}${l.papel === "cliente" ? " (treinador)" : ""}`;
+        n[l.outra_id] = l.papel === "cliente" ? t("links.nomeTreinador", { nome: l.outra_nome ?? t("links.treinador") }) : l.outra_nome ?? "";
       }
       setNames(n);
     })();
@@ -34,7 +36,7 @@ export default function PlanoPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Plano base" subtitle="O modelo do seu dia: cada dia novo começa como cópia deste plano." />
+      <PageHeader title={t("plano.titulo")} subtitle={t("plano.subtitulo")} />
       {uid ? <PlanEditor ownerId={uid} viewerId={uid} targets={targets} names={names} /> : <Skeleton className="h-64" />}
     </div>
   );

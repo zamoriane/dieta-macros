@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { sum, type LogItem } from "@/lib/data";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/lib/i18n/client";
 
 export function MealCard({
   name,
@@ -22,6 +23,7 @@ export function MealCard({
   repeatCount?: number;
   defaultOpen?: boolean;
 }) {
+  const { t: tr, tp } = useI18n();
   const [open, setOpen] = useState(defaultOpen);
   const t = sum(items);
   const empty = items.length === 0;
@@ -46,13 +48,13 @@ export function MealCard({
             <span className="block font-semibold leading-snug">{name}</span>
             <span className="tabular block text-xs text-muted">
               {empty ? (
-                "Vazio"
+                tr("refeicao.vazia")
               ) : (
                 <>
-                  {items.length} {items.length === 1 ? "item" : "itens"} · P {Math.round(t.protein)} g
+                  {tp("refeicao.itens", items.length)} · {tr("macro.p")} {Math.round(t.protein)} g
                   <span className="hidden sm:inline">
                     {" "}
-                    · C {Math.round(t.carbs)} · G {Math.round(t.fat)}
+                    · {tr("macro.c")} {Math.round(t.carbs)} · {tr("macro.g")} {Math.round(t.fat)}
                   </span>
                 </>
               )}
@@ -64,7 +66,7 @@ export function MealCard({
           </span>
           <Icon name="chevronDown" size={18} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
-        <button className="icon-btn shrink-0 text-accent" onClick={onAdd} aria-label={`Adicionar alimento a ${name}`}>
+        <button className="icon-btn shrink-0 text-accent" onClick={onAdd} aria-label={tr("refeicao.adicionarA", { nome: name })}>
           <Icon name="plus" />
         </button>
       </div>
@@ -74,11 +76,11 @@ export function MealCard({
           {empty ? (
             <div className="flex flex-wrap items-center gap-2 px-4 py-4">
               <button className="btn btn-primary" onClick={onAdd}>
-                <Icon name="plus" size={18} /> Adicionar alimento
+                <Icon name="plus" size={18} /> {tr("refeicao.adicionarAlimento")}
               </button>
               {onRepeat && repeatCount > 0 && (
                 <button className="btn btn-ghost" onClick={onRepeat}>
-                  <Icon name="repeat" size={18} /> Repetir de ontem ({repeatCount})
+                  <Icon name="repeat" size={18} /> {tr("refeicao.repetirOntem", { n: repeatCount })}
                 </button>
               )}
             </div>
@@ -89,7 +91,7 @@ export function MealCard({
               ))}
               <li>
                 <button className="flex min-h-12 w-full items-center gap-2 px-4 text-sm font-medium text-accent hover:bg-card-2/60" onClick={onAdd}>
-                  <Icon name="plus" size={18} /> Adicionar alimento
+                  <Icon name="plus" size={18} /> {tr("refeicao.adicionarAlimento")}
                 </button>
               </li>
             </ul>
@@ -101,30 +103,31 @@ export function MealCard({
 }
 
 export function FoodItemRow({ item, onEdit, onRemove }: { item: LogItem; onEdit: () => void; onRemove: () => void }) {
+  const { t } = useI18n();
   const diff = item.gramas_plano != null ? Number(item.gramas) - Number(item.gramas_plano) : 0;
   return (
     <li className="flex items-center gap-2 py-2 pl-4 pr-2">
-      <button className="min-w-0 flex-1 rounded-lg py-1 text-left" onClick={onEdit} aria-label={`Editar quantidade de ${item.food_name}`}>
+      <button className="min-w-0 flex-1 rounded-lg py-1 text-left" onClick={onEdit} aria-label={t("refeicao.editarQtd", { nome: item.food_name })}>
         <span className="block truncate text-sm font-medium">{item.food_name}</span>
         <span className="tabular mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted">
           <span>{Number(item.gramas)} g</span>
           {diff !== 0 && (
             <span className="rounded bg-warn-soft px-1 font-medium text-warn">
               {diff > 0 ? "+" : ""}
-              {diff} g vs plano
+              {t("refeicao.vsPlano", { g: diff })}
             </span>
           )}
-          {item.gramas_plano == null && <span className="rounded bg-accent-soft px-1 font-medium text-accent">extra</span>}
+          {item.gramas_plano == null && <span className="rounded bg-accent-soft px-1 font-medium text-accent">{t("refeicao.extra")}</span>}
           <span>
-            P {Math.round(item.protein)} · C {Math.round(item.carbs)} · G {Math.round(item.fat)}
+            {t("macro.p")} {Math.round(item.protein)} · {t("macro.c")} {Math.round(item.carbs)} · {t("macro.g")} {Math.round(item.fat)}
           </span>
         </span>
       </button>
       <span className="tabular w-12 shrink-0 text-right text-sm font-semibold">{Math.round(item.kcal)}</span>
-      <button className="icon-btn hidden shrink-0 sm:inline-flex" onClick={onEdit} aria-label={`Editar ${item.food_name}`}>
+      <button className="icon-btn hidden shrink-0 sm:inline-flex" onClick={onEdit} aria-label={t("comum.editarX", { nome: item.food_name })}>
         <Icon name="edit" size={18} />
       </button>
-      <button className="icon-btn shrink-0 hover:!text-bad" onClick={onRemove} aria-label={`Remover ${item.food_name}`}>
+      <button className="icon-btn shrink-0 hover:!text-bad" onClick={onRemove} aria-label={t("comum.removerX", { nome: item.food_name })}>
         <Icon name="trash" size={18} />
       </button>
     </li>

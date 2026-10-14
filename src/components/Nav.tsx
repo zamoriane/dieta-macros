@@ -5,20 +5,22 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { Avatar } from "@/components/ui/Avatar";
+import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
+import { isLocale, type MessageKey } from "@/lib/i18n/core";
 
-type NavLink = { href: string; label: string; icon: IconName };
+type NavLink = { href: string; label: MessageKey; icon: IconName };
 
 const MAIN: NavLink[] = [
-  { href: "/", label: "Hoje", icon: "today" },
-  { href: "/plano", label: "Plano", icon: "plan" },
-  { href: "/treino", label: "Treino", icon: "dumbbell" },
-  { href: "/resumo", label: "Resumo", icon: "chart" },
+  { href: "/", label: "nav.hoje", icon: "today" },
+  { href: "/plano", label: "nav.plano", icon: "plan" },
+  { href: "/treino", label: "nav.treino", icon: "dumbbell" },
+  { href: "/resumo", label: "nav.resumo", icon: "chart" },
 ];
-const CLIENTES: NavLink = { href: "/clientes", label: "Clientes", icon: "users" };
+const CLIENTES: NavLink = { href: "/clientes", label: "nav.clientes", icon: "users" };
 
 const HIDDEN = ["/login", "/privacidade", "/termos", "/conta-desativada"];
 
-type Me = { nome: string | null; email: string | null; avatar: string | null; admin: boolean; trainer: boolean };
+type Me = { nome: string | null; email: string | null; avatar: string | null; admin: boolean; trainer: boolean; idioma: string | null };
 
 function Logo() {
   return (
@@ -36,6 +38,7 @@ function Logo() {
 
 /** Botão do utilizador (desktop): avatar com menu — Perfil, Admin, palavra-passe, Sair. */
 function UserMenu({ me, active }: { me: Me; active: boolean }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const path = usePathname();
@@ -60,7 +63,7 @@ function UserMenu({ me, active }: { me: Me; active: boolean }) {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label={`Conta de ${me.nome ?? me.email ?? "utilizador"}`}
+        aria-label={t("nav.contaDe", { nome: me.nome ?? me.email ?? "" })}
         className={`flex items-center gap-2 rounded-full p-0.5 pr-2 transition-colors hover:bg-card-2 ${active || open ? "bg-accent-soft" : ""}`}
       >
         <Avatar name={me.nome} email={me.email} src={me.avatar} size={34} className={active ? "ring-2 ring-accent" : ""} />
@@ -71,26 +74,30 @@ function UserMenu({ me, active }: { me: Me; active: boolean }) {
           <div className="flex items-center gap-3 px-3 py-2">
             <Avatar name={me.nome} email={me.email} src={me.avatar} size={40} />
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{me.nome || "Sem nome"}</div>
+              <div className="truncate text-sm font-semibold">{me.nome || t("nav.semNome")}</div>
               <div className="truncate text-xs text-muted">{me.email}</div>
             </div>
           </div>
+          <div className="flex items-center justify-between px-3 py-1.5 text-sm">
+            <span className="text-muted">{t("lang.label")}</span>
+            <LanguageSwitch />
+          </div>
           <div className="my-1 border-t border-line" />
           <Link role="menuitem" href="/perfil" className={item}>
-            <Icon name="user" size={18} className="text-muted" /> Perfil e metas
+            <Icon name="user" size={18} className="text-muted" /> {t("nav.perfilMetas")}
           </Link>
           {me.admin && (
             <Link role="menuitem" href="/admin" className={item}>
-              <Icon name="gauge" size={18} className="text-muted" /> Administração
+              <Icon name="gauge" size={18} className="text-muted" /> {t("nav.admin")}
             </Link>
           )}
           <Link role="menuitem" href="/nova-senha" className={item}>
-            <Icon name="lock" size={18} className="text-muted" /> Alterar palavra-passe
+            <Icon name="lock" size={18} className="text-muted" /> {t("nav.alterarPassword")}
           </Link>
           <div className="my-1 border-t border-line" />
           <form action="/auth/signout" method="post">
             <button role="menuitem" type="submit" className={`${item} text-bad`}>
-              <Icon name="logout" size={18} /> Sair
+              <Icon name="logout" size={18} /> {t("nav.sair")}
             </button>
           </form>
         </div>
@@ -100,6 +107,7 @@ function UserMenu({ me, active }: { me: Me; active: boolean }) {
 }
 
 export function Nav() {
+  const { t, locale, setLocale } = useI18n();
   const path = usePathname();
   const sb = useMemo(() => createClient(), []);
   const [me, setMe] = useState<Me | null>(null);
@@ -111,19 +119,25 @@ export function Nav() {
       const { data: s } = await sb.auth.getSession();
       const user = s.session?.user;
       if (!user) return;
-      const { data } = await sb.from("profiles").select("nome, avatar_url, role, pt_estado").eq("id", user.id).maybeSingle();
+      const { data } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
       setMe({
         nome: data?.nome ?? null,
         email: user.email ?? null,
         avatar: data?.avatar_url ?? null,
         admin: data?.role === "admin",
         trainer: data?.pt_estado === "aprovado",
+        idioma: data?.idioma ?? null,
       });
     };
     load();
     window.addEventListener("perfil-atualizado", load);
     return () => window.removeEventListener("perfil-atualizado", load);
   }, [sb, hidden]);
+
+  // O idioma guardado no perfil prevalece sobre o do cookie (ex.: outro dispositivo)
+  useEffect(() => {
+    if (me?.idioma && isLocale(me.idioma) && me.idioma !== locale) setLocale(me.idioma, { persist: false });
+  }, [me?.idioma]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (hidden) return null;
   const isActive = (href: string) => (href === "/" ? path === "/" : path.startsWith(href));
@@ -135,7 +149,7 @@ export function Nav() {
     <>
       {/* Desktop / tablet largo: barra superior */}
       <header className="sticky top-0 z-40 hidden border-b border-line bg-card/90 backdrop-blur md:block">
-        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6" aria-label="Principal">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6" aria-label={t("nav.principal")}>
           <Logo />
           <ul className="flex items-center gap-1">
             {desktopLinks.map((l) => (
@@ -148,7 +162,7 @@ export function Nav() {
                   }`}
                 >
                   <Icon name={l.icon} size={18} />
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               </li>
             ))}
@@ -164,7 +178,7 @@ export function Nav() {
       {/* Telemóvel: barra inferior fixa; o último separador é o avatar (Perfil) */}
       <nav
         className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-        aria-label="Principal"
+        aria-label={t("nav.principal")}
       >
         <ul className={`mx-auto grid max-w-md ${mobileLinks.length === 5 ? "grid-cols-6" : "grid-cols-5"}`}>
           {mobileLinks.map((l) => {
@@ -179,7 +193,7 @@ export function Nav() {
                   <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${active ? "bg-accent-soft" : ""}`}>
                     <Icon name={l.icon} size={20} strokeWidth={active ? 2.1 : 1.75} />
                   </span>
-                  {l.label}
+                  {t(l.label)}
                 </Link>
               </li>
             );
@@ -193,7 +207,7 @@ export function Nav() {
               <span className="flex h-7 w-11 items-center justify-center">
                 <Avatar name={me?.nome} email={me?.email} src={me?.avatar} size={26} className={profileActive ? "ring-2 ring-accent" : ""} />
               </span>
-              Perfil
+              {t("nav.perfil")}
             </Link>
           </li>
         </ul>

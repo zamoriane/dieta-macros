@@ -8,8 +8,10 @@ import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { EmptyState, FormField, ProgressBar, SectionCard, Skeleton } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
+import { useI18n } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n/core";
 
-const DEFAULT_MEALS = ["Pequeno-almoço", "Lanche da manhã", "Almoço", "Lanche", "Jantar"];
+const DEFAULT_MEALS: MessageKey[] = ["plano.ref.pa", "plano.ref.lancheManha", "plano.ref.almoco", "plano.ref.lanche", "plano.ref.jantar"];
 
 type Change = { id: number; actor_id: string | null; acao: string; resumo: string; em: string };
 
@@ -28,6 +30,7 @@ export function PlanEditor({
   targets?: Targets | null;
   names?: Record<string, string>;
 }) {
+  const { t, df } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const [meals, setMeals] = useState<PlanMeal[]>([]);
   const [items, setItems] = useState<PlanItem[]>([]);
@@ -58,7 +61,7 @@ export function PlanEditor({
 
   const macrosOf = (it: PlanItem) => scale(it.foods, Number(it.gramas));
   const totals = sum(items.map(macrosOf));
-  const who = (id: string | null) => (!id ? "sistema" : id === viewerId ? "você" : names[id] ?? "outra pessoa");
+  const who = (id: string | null) => (!id ? t("comum.sistema") : id === viewerId ? t("comum.porVoce") : names[id] ?? t("comum.outraPessoa"));
 
   async function saveMeal() {
     const nome = mealName.trim();
@@ -70,11 +73,11 @@ export function PlanEditor({
     if (error) return toast(error.message, { kind: "erro" });
     setMealDialog(null);
     await load();
-    toast(mealDialog.mode === "new" ? "Refeição criada" : "Refeição renomeada");
+    toast(mealDialog.mode === "new" ? t("plano.refCriada") : t("plano.refRenomeada"));
   }
 
   async function createDefaults() {
-    const { error } = await sb.from("plan_meals").insert(DEFAULT_MEALS.map((nome, i) => ({ user_id: ownerId, nome, posicao: i })));
+    const { error } = await sb.from("plan_meals").insert(DEFAULT_MEALS.map((k, i) => ({ user_id: ownerId, nome: t(k), posicao: i })));
     if (error) return toast(error.message, { kind: "erro" });
     load();
   }
@@ -96,7 +99,7 @@ export function PlanEditor({
     if (error) return toast(error.message, { kind: "erro" });
     setDeleteMeal(null);
     await load();
-    toast(`"${deleteMeal.nome}" apagada do plano`);
+    toast(t("plano.refApagada", { nome: deleteMeal.nome }));
   }
 
   async function saveGrams() {
@@ -106,16 +109,16 @@ export function PlanEditor({
     if (error) return toast(error.message, { kind: "erro" });
     setEditItem(null);
     await load();
-    toast("Quantidade atualizada");
+    toast(t("hoje.qtdAtualizada"));
   }
 
   async function removeItem(it: PlanItem) {
     const { error } = await sb.from("plan_items").delete().eq("id", it.id);
     if (error) return toast(error.message, { kind: "erro" });
     await load();
-    toast(`${it.foods.name} removido do plano`, {
+    toast(t("plano.removido", { nome: it.foods.name }), {
       action: {
-        label: "Desfazer",
+        label: t("comum.desfazer"),
         run: async () => {
           await sb.from("plan_items").insert({ user_id: ownerId, plan_meal_id: it.plan_meal_id, food_id: it.food_id, gramas: it.gramas, posicao: it.posicao });
           load();
@@ -129,26 +132,26 @@ export function PlanEditor({
   return (
     <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <div className="min-w-0 space-y-5 lg:sticky lg:top-24">
-        <SectionCard title="Total do plano">
+        <SectionCard title={t("plano.total")}>
           <div className="tabular flex items-baseline gap-2">
             <span className="text-3xl font-bold">{totals.kcal}</span>
-            <span className="text-sm text-muted">{targets ? `de ${targets.kcal} kcal (meta do dia)` : "kcal"}</span>
+            <span className="text-sm text-muted">{targets ? t("plano.deMetaDia", { meta: targets.kcal }) : "kcal"}</span>
           </div>
           {targets && (
             <p className={`mt-1 text-xs ${Math.abs(totals.kcal - targets.kcal) <= targets.kcal * 0.05 ? "text-good" : "text-warn"}`}>
               {Math.abs(totals.kcal - targets.kcal) <= targets.kcal * 0.05
-                ? "O plano está alinhado com a meta."
+                ? t("plano.alinhado")
                 : totals.kcal > targets.kcal
-                  ? `${totals.kcal - targets.kcal} kcal acima da meta.`
-                  : `${targets.kcal - totals.kcal} kcal abaixo da meta.`}
+                  ? t("plano.acimaMeta", { kcal: totals.kcal - targets.kcal })
+                  : t("plano.abaixoMeta", { kcal: targets.kcal - totals.kcal })}
             </p>
           )}
           <ul className="mt-4 space-y-3">
             {(
               [
-                ["protein", "Proteína", "prot"],
-                ["carbs", "Carboidratos", "carb"],
-                ["fat", "Gordura", "fat"],
+                ["protein", t("macro.proteina"), "prot"],
+                ["carbs", t("macro.hidratos"), "carb"],
+                ["fat", t("macro.gordura"), "fat"],
               ] as const
             ).map(([k, label, color]) => (
               <li key={k}>
@@ -163,10 +166,10 @@ export function PlanEditor({
               </li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-muted">Cada dia novo começa como cópia deste plano. Alterações aqui não mudam dias já registados.</p>
+          <p className="mt-3 text-xs text-muted">{t("plano.explica")}</p>
         </SectionCard>
 
-        <SectionCard title="Histórico de alterações">
+        <SectionCard title={t("hist.titulo")}>
           {changes.length ? (
             <ul className="space-y-2.5 text-sm">
               {changes.slice(0, 12).map((c) => (
@@ -177,24 +180,24 @@ export function PlanEditor({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block">
-                      <span className="capitalize">{c.acao}</span> {c.resumo}
+                      <span>{t(`hist.${c.acao}` as MessageKey)}</span> {c.resumo}
                     </span>
                     <span className="text-xs text-muted">
-                      por {who(c.actor_id)} · {new Date(c.em).toLocaleString("pt-PT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {t("hist.por", { quem: who(c.actor_id) })} · {df(new Date(c.em), { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </span>
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-muted">As alterações ao plano passam a ficar registadas aqui, com quem as fez.</p>
+            <p className="text-sm text-muted">{t("plano.histVazio")}</p>
           )}
         </SectionCard>
       </div>
 
       <div className="min-w-0 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Refeições</h2>
+          <h2 className="text-lg font-semibold">{t("hoje.refeicoes")}</h2>
           <button
             className="btn btn-ghost !min-h-10 !px-3"
             onClick={() => {
@@ -202,34 +205,34 @@ export function PlanEditor({
               setMealDialog({ mode: "new" });
             }}
           >
-            <Icon name="plus" size={18} /> Refeição
+            <Icon name="plus" size={18} /> {t("hoje.refeicao")}
           </button>
         </div>
 
         {!loaded && [0, 1, 2].map((i) => <Skeleton key={i} className="h-24" />)}
 
         {loaded && meals.length === 0 && (
-          <EmptyState icon="plan" title="Plano vazio">
+          <EmptyState icon="plan" title={t("plano.vazio")}>
             <button className="btn btn-primary mt-2" onClick={createDefaults}>
-              Criar refeições padrão
+              {t("plano.criarPadrao")}
             </button>
-            <p className="mt-2 text-xs">{DEFAULT_MEALS.join(" · ")}</p>
+            <p className="mt-2 text-xs">{DEFAULT_MEALS.map((k) => t(k)).join(" · ")}</p>
           </EmptyState>
         )}
 
         {meals.map((m, i) => {
           const its = items.filter((it) => it.plan_meal_id === m.id);
-          const t = sum(its.map(macrosOf));
+          const tt = sum(its.map(macrosOf));
           return (
             <section key={m.id} className="card overflow-hidden">
               <div className="flex items-center gap-1 py-2 pl-4 pr-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold leading-snug">{m.nome}</h3>
                   <p className="tabular text-xs text-muted">
-                    {t.kcal} kcal · P {Math.round(t.protein)} g · C {Math.round(t.carbs)} · G {Math.round(t.fat)}
+                    {tt.kcal} kcal · {t("macro.p")} {Math.round(tt.protein)} g · {t("macro.c")} {Math.round(tt.carbs)} · {t("macro.g")} {Math.round(tt.fat)}
                   </p>
                 </div>
-                <button className="icon-btn" disabled={i === 0} style={i === 0 ? { opacity: 0.3 } : undefined} onClick={() => move(m, -1)} aria-label={`Subir ${m.nome}`}>
+                <button className="icon-btn" disabled={i === 0} style={i === 0 ? { opacity: 0.3 } : undefined} onClick={() => move(m, -1)} aria-label={t("comum.subir", { nome: m.nome })}>
                   <Icon name="chevronDown" size={18} className="rotate-180" />
                 </button>
                 <button
@@ -237,7 +240,7 @@ export function PlanEditor({
                   disabled={i === meals.length - 1}
                   style={i === meals.length - 1 ? { opacity: 0.3 } : undefined}
                   onClick={() => move(m, 1)}
-                  aria-label={`Descer ${m.nome}`}
+                  aria-label={t("comum.descer", { nome: m.nome })}
                 >
                   <Icon name="chevronDown" size={18} />
                 </button>
@@ -247,11 +250,11 @@ export function PlanEditor({
                     setMealName(m.nome);
                     setMealDialog({ mode: "rename", meal: m });
                   }}
-                  aria-label={`Renomear ${m.nome}`}
+                  aria-label={t("comum.renomear", { nome: m.nome })}
                 >
                   <Icon name="edit" size={18} />
                 </button>
-                <button className="icon-btn hover:!text-bad" onClick={() => setDeleteMeal(m)} aria-label={`Apagar ${m.nome}`}>
+                <button className="icon-btn hover:!text-bad" onClick={() => setDeleteMeal(m)} aria-label={t("comum.apagarX", { nome: m.nome })}>
                   <Icon name="trash" size={18} />
                 </button>
               </div>
@@ -266,15 +269,15 @@ export function PlanEditor({
                           setEditItem(it);
                           setGrams(String(Number(it.gramas)));
                         }}
-                        aria-label={`Editar quantidade de ${it.foods.name}`}
+                        aria-label={t("refeicao.editarQtd", { nome: it.foods.name })}
                       >
                         <span className="block text-sm font-medium leading-snug">{it.foods.name}</span>
                         <span className="tabular text-xs text-muted">
-                          {Number(it.gramas)} g · {Math.round(Number(it.foods.kcal_100g))} kcal/100 g · P {Math.round(mm.protein)}
+                          {Number(it.gramas)} g · {Math.round(Number(it.foods.kcal_100g))} kcal/100 g · {t("macro.p")} {Math.round(mm.protein)}
                         </span>
                       </button>
                       <span className="tabular w-12 shrink-0 text-right text-sm font-semibold">{Math.round(mm.kcal)}</span>
-                      <button className="icon-btn shrink-0 hover:!text-bad" onClick={() => removeItem(it)} aria-label={`Remover ${it.foods.name}`}>
+                      <button className="icon-btn shrink-0 hover:!text-bad" onClick={() => removeItem(it)} aria-label={t("comum.removerX", { nome: it.foods.name })}>
                         <Icon name="trash" size={18} />
                       </button>
                     </li>
@@ -282,7 +285,7 @@ export function PlanEditor({
                 })}
                 <li>
                   <button className="flex min-h-12 w-full items-center gap-2 px-4 text-sm font-medium text-accent hover:bg-card-2/60" onClick={() => setPicker(m)}>
-                    <Icon name="plus" size={18} /> Adicionar alimento
+                    <Icon name="plus" size={18} /> {t("refeicao.adicionarAlimento")}
                   </button>
                 </li>
               </ul>
@@ -293,7 +296,7 @@ export function PlanEditor({
 
       {picker && (
         <FoodPicker
-          title={`Adicionar a ${picker.nome}`}
+          title={t("hoje.adicionarA", { nome: picker.nome })}
           onClose={() => setPicker(null)}
           onPick={async (food, g) => {
             const { error } = await sb.from("plan_items").insert({
@@ -305,7 +308,7 @@ export function PlanEditor({
             });
             if (error) return toast(error.message, { kind: "erro" });
             await load();
-            toast(`${food.name} adicionado ao plano`);
+            toast(t("plano.adicionado", { nome: food.name }));
           }}
         />
       )}
@@ -317,10 +320,10 @@ export function PlanEditor({
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setEditItem(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!(eg > 0)} onClick={saveGrams}>
-              Guardar
+              {t("comum.guardar")}
             </button>
           </>
         }
@@ -335,20 +338,20 @@ export function PlanEditor({
 
       <ResponsiveDialog
         open={!!mealDialog}
-        title={mealDialog?.mode === "rename" ? "Renomear refeição" : "Nova refeição"}
+        title={mealDialog?.mode === "rename" ? t("plano.renomearRef") : t("hoje.novaRefeicao")}
         onClose={() => setMealDialog(null)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setMealDialog(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn btn-primary flex-1" disabled={!mealName.trim()} onClick={saveMeal}>
-              Guardar
+              {t("comum.guardar")}
             </button>
           </>
         }
       >
-        <FormField label="Nome" hint="Ex.: Pré-treino, Ceia">
+        <FormField label={t("comum.nome")} hint={t("plano.refDica")}>
           <input
             data-autofocus
             className="w-full"
@@ -361,21 +364,21 @@ export function PlanEditor({
 
       <ResponsiveDialog
         open={!!deleteMeal}
-        title="Apagar refeição"
+        title={t("plano.apagarRef")}
         onClose={() => setDeleteMeal(null)}
         footer={
           <>
             <button className="btn btn-ghost flex-1" onClick={() => setDeleteMeal(null)}>
-              Cancelar
+              {t("comum.cancelar")}
             </button>
             <button className="btn flex-1 bg-bad text-white" onClick={confirmDeleteMeal}>
-              Apagar
+              {t("comum.apagar")}
             </button>
           </>
         }
       >
         <p className="text-sm">
-          Apagar <strong>{deleteMeal?.nome}</strong> e os alimentos dela do plano base? Os dias já registados não mudam.
+          {t("plano.apagarRefPergunta", { nome: deleteMeal?.nome ?? "" })}
         </p>
       </ResponsiveDialog>
     </div>

@@ -2,24 +2,28 @@ import Link from "next/link";
 import type { EnergyBalance, Macros, Targets } from "@/lib/nutrition";
 import { SourceBadge, StatusBadge, type Tone } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
+import { useI18n } from "@/lib/i18n/client";
 
-function status(intake: number, target: number): { tone: Tone; text: string } {
-  if (intake === 0) return { tone: "neutral", text: "Ainda sem registos" };
+type T = ReturnType<typeof useI18n>["t"];
+
+function status(t: T, intake: number, target: number): { tone: Tone; text: string } {
+  if (intake === 0) return { tone: "neutral", text: t("cal.semRegistos") };
   const diff = target - intake;
   const pct = Math.abs(diff) / target;
-  if (pct <= 0.05) return { tone: "good", text: "Muito perto da meta" };
-  if (diff > 0) return { tone: "accent", text: `Faltam ${Math.round(diff)} kcal` };
-  if (pct <= 0.1) return { tone: "warn", text: `${Math.round(-diff)} kcal acima` };
-  return { tone: "bad", text: `${Math.round(-diff)} kcal acima` };
+  if (pct <= 0.05) return { tone: "good", text: t("cal.pertoMeta") };
+  if (diff > 0) return { tone: "accent", text: t("cal.faltam", { kcal: Math.round(diff) }) };
+  if (pct <= 0.1) return { tone: "warn", text: t("cal.acima", { kcal: Math.round(-diff) }) };
+  return { tone: "bad", text: t("cal.acima", { kcal: Math.round(-diff) }) };
 }
 
 function Ring({ intake, target, tone }: { intake: number; target: number; tone: Tone }) {
+  const { t } = useI18n();
   const R = 54;
   const C = 2 * Math.PI * R;
   const pct = target > 0 ? Math.min(1, intake / target) : 0;
   const color = tone === "bad" ? "var(--bad)" : tone === "warn" ? "var(--warn)" : "var(--ring)";
   return (
-    <svg viewBox="0 0 128 128" className="h-36 w-36 shrink-0 sm:h-40 sm:w-40" role="img" aria-label={`${intake} de ${target} kcal`}>
+    <svg viewBox="0 0 128 128" className="h-36 w-36 shrink-0 sm:h-40 sm:w-40" role="img" aria-label={t("cal.deKcal", { v: intake, meta: target })}>
       <circle cx="64" cy="64" r={R} fill="none" stroke="var(--card-2)" strokeWidth="11" />
       <circle
         cx="64"
@@ -37,7 +41,7 @@ function Ring({ intake, target, tone }: { intake: number; target: number; tone: 
         {intake}
       </text>
       <text x="64" y="82" textAnchor="middle" className="fill-[var(--muted)] text-[11px]">
-        de {target} kcal
+        {t("cal.deMeta", { meta: target })}
       </text>
     </svg>
   );
@@ -62,48 +66,49 @@ export function CalorieCard({
   deficitTarget?: number;
   isToday: boolean;
 }) {
+  const { t } = useI18n();
   if (!targets || !balance) {
     return (
       <section className="card p-5">
         <div className="flex items-center gap-4">
           <div className="text-4xl font-bold tabular-nums">{totals.kcal}</div>
-          <div className="text-sm text-muted">kcal ingeridas</div>
+          <div className="text-sm text-muted">{t("cal.kcalIngeridas")}</div>
         </div>
         <Link href="/perfil" className="mt-4 flex items-center gap-2 rounded-xl bg-accent-soft p-3 text-sm font-medium text-accent">
-          <Icon name="info" size={18} /> Complete o perfil e registe o peso para ver metas, gasto e défice
+          <Icon name="info" size={18} /> {t("cal.completePerfil")}
           <Icon name="chevronRight" size={16} className="ml-auto" />
         </Link>
       </section>
     );
   }
 
-  const st = status(totals.kcal, targets.kcal);
+  const st = status(t, totals.kcal, targets.kcal);
   const deficit = balance.deficit;
-  const deficitLabel = deficit >= 0 ? (isToday ? "Défice previsto" : "Défice do dia") : isToday ? "Excedente previsto" : "Excedente do dia";
+  const deficitLabel = deficit >= 0 ? (isToday ? t("cal.deficePrevisto") : t("cal.deficeDia")) : isToday ? t("cal.excedentePrevisto") : t("cal.excedenteDia");
   const deficitTone = deficit < 0 ? "text-bad" : deficitTarget && deficit >= deficitTarget * 0.8 ? "text-good" : "text-ink";
   const actSource = balance.source === "oura" ? source : "estim";
 
   return (
-    <section className="card p-5" aria-label="Calorias do dia">
+    <section className="card p-5" aria-label={t("cal.doDia")}>
       <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
         <Ring intake={totals.kcal} target={targets.kcal} tone={st.tone} />
         <div className="w-full min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold">Calorias</h2>
+            <h2 className="text-sm font-semibold">{t("cal.calorias")}</h2>
             <StatusBadge tone={st.tone}>{st.text}</StatusBadge>
           </div>
           <dl className="tabular grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
             <div>
-              <dt className="text-xs text-muted">Ingerido</dt>
+              <dt className="text-xs text-muted">{t("cal.ingerido")}</dt>
               <dd className="text-lg font-semibold">{balance.intake}</dd>
             </div>
             <div>
-              <dt className="text-xs text-muted">Meta de ingestão</dt>
+              <dt className="text-xs text-muted">{t("cal.metaIngestao")}</dt>
               <dd className="text-lg font-semibold">{targets.kcal}</dd>
             </div>
             <div>
               <dt className="flex items-center gap-1.5 text-xs text-muted">
-                Gasto {projected ? "previsto" : "total"} <SourceBadge source={actSource} />
+                {projected ? t("cal.gastoPrevisto") : t("cal.gastoTotal")} <SourceBadge source={actSource} />
               </dt>
               <dd className="text-lg font-semibold">{balance.expenditure}</dd>
             </div>
@@ -111,7 +116,7 @@ export function CalorieCard({
               <dt className="text-xs text-muted">{deficitLabel}</dt>
               <dd className={`text-lg font-semibold ${deficitTone}`}>
                 {Math.abs(deficit)}
-                {deficitTarget ? <span className="ml-1 text-xs font-normal text-muted">alvo {deficitTarget}</span> : null}
+                {deficitTarget ? <span className="ml-1 text-xs font-normal text-muted">{t("cal.alvo", { v: deficitTarget })}</span> : null}
               </dd>
             </div>
           </dl>
@@ -120,17 +125,17 @@ export function CalorieCard({
 
       <details className="group mt-4 border-t border-line pt-3 text-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-medium text-muted hover:text-ink">
-          Como é calculado
+          {t("cal.comoCalculado")}
           <Icon name="chevronDown" size={16} className="transition-transform group-open:rotate-180" />
         </summary>
         <div className="tabular mt-3 space-y-1.5 text-sm">
-          <Row k="Basal (Mifflin-St Jeor)" v={balance.bmr} />
-          <Row k={projected ? "Atividade prevista (média 14 dias)" : "Atividade (corrigida)"} v={balance.activity} />
-          {projected && liveActivity != null && <Row k="Atividade até agora" v={liveActivity} muted />}
-          <Row k="Gasto" v={balance.expenditure} strong />
-          <Row k="− Ingerido" v={balance.intake} />
-          <Row k={deficit >= 0 ? "= Défice" : "= Excedente"} v={Math.abs(deficit)} strong />
-          {balance.ouraTotal != null && <Row k="Referência: total do dia no Oura" v={balance.ouraTotal} muted />}
+          <Row k={t("cal.basal")} v={balance.bmr} />
+          <Row k={projected ? t("cal.atividadePrevista") : t("cal.atividadeCorrigida")} v={balance.activity} />
+          {projected && liveActivity != null && <Row k={t("cal.atividadeAgora")} v={liveActivity} muted />}
+          <Row k={t("cal.gasto")} v={balance.expenditure} strong />
+          <Row k={`− ${t("cal.ingerido")}`} v={balance.intake} />
+          <Row k={deficit >= 0 ? `= ${t("cal.defice")}` : `= ${t("cal.excedente")}`} v={Math.abs(deficit)} strong />
+          {balance.ouraTotal != null && <Row k={t("cal.refOura")} v={balance.ouraTotal} muted />}
         </div>
       </details>
     </section>

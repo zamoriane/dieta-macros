@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { FormField, PageHeader } from "@/components/ui/Primitives";
 import { toast } from "@/components/ui/Toast";
+import { useI18n } from "@/lib/i18n/client";
 
 /** Definir uma palavra-passe nova (vindo do Perfil ou do link "Esqueceu a palavra-passe?"). */
 export default function NovaSenhaPage() {
+  const { t } = useI18n();
   const sb = useMemo(() => createClient(), []);
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -34,37 +36,37 @@ export default function NovaSenhaPage() {
       const m = error.message;
       return setError(
         /different from the old/i.test(m)
-          ? "A nova palavra-passe tem de ser diferente da atual."
+          ? t("senha.err.igual")
           : /reauthentication|recent login/i.test(m)
-            ? "Por segurança, saia e entre de novo antes de alterar a palavra-passe."
+            ? t("senha.err.reautenticar")
             : /weak|least/i.test(m)
-              ? "Palavra-passe demasiado fraca. Use pelo menos 8 caracteres, misturando letras e números."
+              ? t("senha.err.fraca")
               : m,
       );
     }
-    toast("Palavra-passe alterada");
+    toast(t("senha.alterada"));
     router.replace("/perfil");
   }
 
   return (
     <div className="mx-auto max-w-md space-y-5 pt-2">
-      <PageHeader title="Nova palavra-passe" subtitle={email ? `Conta ${email}` : undefined} />
+      <PageHeader title={t("senha.titulo")} subtitle={email ? t("senha.conta", { email }) : undefined} />
       <form onSubmit={save} className="card space-y-4 p-5">
         {/* campo oculto para os gestores de palavras-passe associarem ao email certo */}
         <input type="email" autoComplete="username" value={email} readOnly hidden />
-        <FormField label="Nova palavra-passe" error={tooShort ? "Mínimo de 8 caracteres." : null}>
+        <FormField label={t("senha.nova")} error={tooShort ? t("senha.err.minimo") : null}>
           <input className="w-full" type="password" autoComplete="new-password" minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} required data-autofocus />
         </FormField>
-        <FormField label="Repetir a palavra-passe" error={mismatch ? "As palavras-passe não coincidem." : null}>
+        <FormField label={t("senha.repetir")} error={mismatch ? t("senha.err.diferentes") : null}>
           <input className="w-full" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} required />
         </FormField>
         {error && <p className="rounded-lg bg-bad/10 p-3 text-sm text-bad">{error}</p>}
         <div className="flex gap-2">
           <button type="button" className="btn btn-ghost flex-1" onClick={() => router.back()}>
-            Cancelar
+            {t("comum.cancelar")}
           </button>
           <button className="btn btn-primary flex-1" disabled={!valid || busy}>
-            {busy ? "A guardar…" : "Guardar"}
+            {busy ? t("comum.aGuardar") : t("comum.guardar")}
           </button>
         </div>
       </form>

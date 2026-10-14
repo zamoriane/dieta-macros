@@ -111,7 +111,8 @@ export function dailyTargets(opts: {
   return { kcal, protein, fat, carbs };
 }
 
-export type Alert = { level: "info" | "aviso" | "alerta"; text: string };
+/** Alerta com chave de tradução (ver alert.* em lib/i18n) e variáveis. */
+export type Alert = { level: "info" | "aviso" | "alerta"; key: string; vars?: Record<string, number> };
 
 /** Alertas mostrados ao abrir o app. `hour` é a hora local (0–23). */
 export function buildAlerts(opts: {
@@ -129,28 +130,26 @@ export function buildAlerts(opts: {
   const { totals, targets, balance } = opts;
 
   if (totals.kcal > targets.kcal * 1.05) {
-    a.push({ level: "alerta", text: `Calorias acima da meta: ${totals.kcal} de ${targets.kcal} kcal.` });
+    a.push({ level: "alerta", key: "alert.kcalAcima", vars: { kcal: totals.kcal, meta: targets.kcal } });
   }
   if (opts.isToday && opts.hour >= 18 && totals.protein < targets.protein * 0.75) {
     a.push({
       level: "aviso",
-      text: `Proteína baixa para esta hora: ${totals.protein} de ${targets.protein} g. Faltam ${Math.round(targets.protein - totals.protein)} g.`,
+      key: "alert.proteinaBaixa",
+      vars: { p: totals.protein, meta: targets.protein, falta: Math.round(targets.protein - totals.protein) },
     });
   }
   if (!opts.isToday && balance.deficit < 0) {
-    a.push({ level: "aviso", text: `Dia terminou em excedente de ${-balance.deficit} kcal.` });
+    a.push({ level: "aviso", key: "alert.excedente", vars: { kcal: -balance.deficit } });
   }
   if (opts.lowIntakeStreak >= 3) {
-    a.push({
-      level: "alerta",
-      text: `${opts.lowIntakeStreak} dias seguidos abaixo de ${opts.minKcal} kcal. Défice agressivo demais costuma custar massa muscular e adesão.`,
-    });
+    a.push({ level: "alerta", key: "alert.ingestaoBaixa", vars: { dias: opts.lowIntakeStreak, min: opts.minKcal } });
   }
   if (!opts.hasWeightLast7d) {
-    a.push({ level: "info", text: "Sem registo de peso nos últimos 7 dias. O peso calibra a estimativa de gasto." });
+    a.push({ level: "info", key: "alert.semPeso" });
   }
   if (opts.sleepScore != null && opts.sleepScore < 70) {
-    a.push({ level: "info", text: `Sono fraco (score ${opts.sleepScore}). É normal ter mais fome hoje; priorize proteína e fibra.` });
+    a.push({ level: "info", key: "alert.sonoFraco", vars: { score: opts.sleepScore } });
   }
   return a;
 }
