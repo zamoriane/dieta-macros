@@ -20,6 +20,27 @@ pb "Delete :UISupportedInterfaceOrientations"
 pb "Add :UISupportedInterfaceOrientations array"
 pb "Add :UISupportedInterfaceOrientations:0 string UIInterfaceOrientationPortrait"
 
+# Login Google nativo: esquema de URL = ID do cliente iOS invertido
+GOOGLE_IOS_SCHEME="com.googleusercontent.apps.498189332281-mpq4h0pcgdhlabv6nd476rmh8ucntjfg"
+pb "Delete :CFBundleURLTypes"
+pb "Add :CFBundleURLTypes array"
+pb "Add :CFBundleURLTypes:0 dict"
+pb "Add :CFBundleURLTypes:0:CFBundleURLSchemes array"
+pb "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string $GOOGLE_IOS_SCHEME"
+
+# AppDelegate: entregar à Google o regresso do login (protegido por canImport para não partir a compilação)
+python3 - <<'PY'
+p = "ios/App/App/AppDelegate.swift"
+s = open(p).read()
+if "GIDSignIn" not in s:
+    s = s.replace("import Capacitor", "import Capacitor\n#if canImport(GoogleSignIn)\nimport GoogleSignIn\n#endif", 1)
+    old = "return ApplicationDelegateProxy.shared.application(app, open: url, options: options)"
+    new = "#if canImport(GoogleSignIn)\n        if GIDSignIn.sharedInstance.handle(url) { return true }\n        #endif\n        " + old
+    assert old in s, "AppDelegate inesperado"
+    s = s.replace(old, new, 1)
+    open(p, "w").write(s)
+PY
+
 # Capacidade HealthKit (o identificador da app no portal Apple tem de ter HealthKit ativo)
 cat > ios/App/App/App.entitlements <<'XML'
 <?xml version="1.0" encoding="UTF-8"?>

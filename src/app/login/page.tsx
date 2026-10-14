@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LanguageSwitch, useI18n } from "@/lib/i18n/client";
 import { authErrorKey } from "@/lib/i18n/authErrors";
 import { isNativeApp } from "@/lib/nativeHealthClient";
+import { nativeGoogleSignIn } from "@/lib/nativeGoogle";
 
 // Ligar quando o fornecedor Google estiver configurado no Supabase (NEXT_PUBLIC_AUTH_GOOGLE=1 na Vercel).
 const GOOGLE_ON = process.env.NEXT_PUBLIC_AUTH_GOOGLE === "1";
@@ -18,14 +19,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  // Na app nativa a Google bloqueia o login dentro da WebView; lá usaremos o login nativo.
   const [showGoogle, setShowGoogle] = useState(false);
 
   useEffect(() => {
     const sp = new URLSearchParams(location.search);
     if (sp.get("erro") === "link") setMsg(t("auth.linkExpirado"));
     if (sp.get("conta") === "apagada") setMsg(t("apagar.feito"));
-    setShowGoogle(GOOGLE_ON && !isNativeApp());
+    setShowGoogle(GOOGLE_ON);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const errText = (m: string) => {
@@ -36,6 +36,16 @@ export default function LoginPage() {
   async function google() {
     setBusy(true);
     setMsg(null);
+    // Na app, a Google bloqueia o login dentro da WebView: usa-se o ecrã nativo.
+    if (isNativeApp()) {
+      const r = await nativeGoogleSignIn(sb);
+      setBusy(false);
+      if (r.error) return setMsg(errText(r.error));
+      if (r.cancelled) return;
+      router.replace("/");
+      router.refresh();
+      return;
+    }
     const { error } = await sb.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${location.origin}/auth/callback`, queryParams: { prompt: "select_account" } },

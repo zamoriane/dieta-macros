@@ -14,5 +14,15 @@
   },
   "android": {
     "backgroundColor": "#f5f7fa"
+  },
+  "plugins": {
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "apple": false,
+        "facebook": false,
+        "twitter": false
+      }
+    }
   }
 }
