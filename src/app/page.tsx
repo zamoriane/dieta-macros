@@ -18,8 +18,11 @@ import {
   getUserId,
   isoDay,
   latestWeight,
-  sum,
+
   updateLogGrams,
+  hasStates,
+  setDayComplete,
+  setItemsState,
   type HealthDayRow,
   type LogItem,
   type OuraDay,
@@ -36,6 +39,7 @@ import { ActivityCard } from "@/components/hoje/ActivityCard";
 import { MealCard } from "@/components/hoje/MealCard";
 import { AlertsBar } from "@/components/hoje/AlertsBar";
 import { useI18n } from "@/lib/i18n/client";
+import { dayStatus, dayTotals, isConsumed, mealConfirmTargets, rowStatus, type DailyTotalsRow, type ItemState } from "@/lib/consumption";
 import { getWaterLogs, type WaterLog } from "@/lib/waterData";
 import { effectiveMl, goalMl as waterGoal, parseConfig as parseWater } from "@/lib/water";
 import { syncFromLogs } from "@/lib/waterReminders";
@@ -56,6 +60,14 @@ function strip(it: LogItem) {
   return rest;
 }
 
+/** Item copiado de outro dia por ação do utilizador: entra como extra consumido (a base de dados confirma). */
+function asNewConsumed(it: LogItem) {
+  const rest = strip(it);
+  for (const k of ["estado", "estado_origem", "confirmado_em", "alterado_em"]) delete rest[k];
+  rest.gramas_plano = null;
+  return rest;
+}
+
 export default function HojePage() {
   const { t, df, nf } = useI18n();
   const fmtLong = (iso: string) => df(iso, { weekday: "long", day: "numeric", month: "long" });
@@ -67,6 +79,7 @@ export default function HojePage() {
   const [items, setItems] = useState<LogItem[]>([]);
   const [yItems, setYItems] = useState<LogItem[]>([]);
   const [dayExists, setDayExists] = useState(true);
+  const [dayComplete, setDayComplete_] = useState<boolean | null>(null);
   const [weight, setWeight] = useState<{ dia: string; kg: number } | null>(null);
   const [oura, setOura] = useState<OuraDay | null>(null);
   const [health, setHealth] = useState<HealthDayRow | null>(null);
@@ -91,8 +104,9 @@ export default function HojePage() {
       setProfile(p);
       const uid = p.id;
       if (dia === today) await ensureDay(sb, dia);
-      const { data: d } = await sb.from("days").select("dia").eq("user_id", uid).eq("dia", dia).maybeSingle();
+      const { data: d } = await sb.from("days").select("*").eq("user_id", uid).eq("dia", dia).maybeSingle();
       setDayExists(!!d);
+      setDayComplete_(d && "completo" in d ? !!d.completo : null);
       const src = p.fonte_atividade ?? "oura";
       const [its, yits, w, od, plan, prev, avg, hd] = await Promise.all([
         getDayItems(sb, dia),
@@ -100,7 +114,7 @@ export default function HojePage() {
         latestWeight(sb, dia),
         getActivityDays(sb, dia, dia, src),
         getPlan(sb),
-        sb.from("daily_totals").select("dia,kcal").eq("user_id", uid).gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
+        sb.from("daily_totals").select("*").eq("user_id", uid).gte("dia", addDays(dia, -7)).lt("dia", dia).order("dia", { ascending: false }),
         avgOuraActive(sb, dia, 14, src),
         getHealthDays(sb, dia, dia),
       ]);
@@ -114,8 +128,9 @@ export default function HojePage() {
       setPlanItemCount(plan.items.length);
       setPlanMeals(plan.meals.map((m) => ({ nome: m.nome, posicao: m.posicao })));
       let streak = 0;
-      for (const r of prev.data ?? []) {
-        if (Number(r.kcal) < p.kcal_minimo) streak++;
+      // Só contam dias com registo completo; um dia parcial ou sem registo interrompe a contagem
+      for (const r of (prev.data ?? []) as DailyTotalsRow[]) {
+        if (rowStatus(r, today) === "completo" && Number(r.kcal) < p.kcal_minimo) streak++;
         else break;
       }
       setLowStreak(streak);
@@ -159,7 +174,10 @@ export default function HojePage() {
 
   const isToday = dia === today;
   const source = profile?.fonte_atividade ?? "oura";
-  const totals = sum(items);
+  const dt = dayTotals(items);
+  const totals = dt.consumed; // só o consumo confirmado conta como ingerido
+  const statesOn = hasStates(items);
+  const status = dayStatus({ nConsumed: dt.nConsumed, nPending: dt.nPending, completo: dayComplete, isPast: !isToday });
   const calc = profile ? computeDay(profile, weight?.kg ?? null, totals, oura, dia, { isToday, avgActive }) : null;
 
   const alerts: Alert[] = calc
@@ -173,6 +191,8 @@ export default function HojePage() {
         minKcal: profile!.kcal_minimo,
         hasWeightLast7d: !!weight && weight.dia >= addDays(today, -7),
         sleepScore: oura?.sleep_score,
+        pendingKcal: statesOn ? dt.pending.kcal : 0,
+        complete: status === "completo",
       })
     : [];
 
@@ -237,14 +257,55 @@ export default function HojePage() {
   }
 
   async function repeatYesterday(meal: string, pos: number) {
-    const src = yItems.filter((y) => y.refeicao === meal);
+    // só o que ontem foi realmente comido (confirmado); o planeado não confirmado não se repete
+    const src = yItems.filter((y) => y.refeicao === meal && isConsumed(y));
     if (!src.length) return;
     await ensureDay(sb, dia, false);
     const userId = await getUserId(sb);
-    const { error: e } = await sb.from("log_items").insert(src.map((y) => ({ ...strip(y), user_id: userId, dia, refeicao_pos: pos })));
+    const { error: e } = await sb.from("log_items").insert(src.map((y) => ({ ...asNewConsumed(y), user_id: userId, dia, refeicao_pos: pos })));
     if (e) return toast(t("hoje.erroCopiar"), { kind: "erro" });
     await load();
     toast(t("hoje.copiadoOntem", { nome: meal }));
+  }
+
+  async function setStates(ids: number[], estado: ItemState, msg?: string, undo?: () => void) {
+    if (!ids.length) return;
+    try {
+      await setItemsState(sb, ids, estado);
+      await load();
+      if (msg) toast(msg, undo ? { action: { label: t("comum.desfazer"), run: undo } } : {});
+    } catch {
+      toast(t("comum.erroGuardar"), { kind: "erro" });
+    }
+  }
+
+  function confirmMeal(meal: string, its: LogItem[], confirm: boolean) {
+    const ids = mealConfirmTargets(its, confirm);
+    if (confirm) {
+      const prevById = new Map(its.map((i) => [i.id, i.estado ?? "consumido"]));
+      setStates(ids, "consumido", t("consumo.refeicaoConfirmada", { nome: meal }), async () => {
+        // repõe o estado anterior de cada item (planeado ou legado)
+        const back = new Map<ItemState, number[]>();
+        for (const id of ids) {
+          const st = prevById.get(id) as ItemState;
+          back.set(st, [...(back.get(st) ?? []), id]);
+        }
+        for (const [st, list] of back) await setItemsState(sb, list, st);
+        load();
+      });
+    } else {
+      setStates(ids, "planeado", t("consumo.confirmacaoDesfeita", { nome: meal }));
+    }
+  }
+
+  async function toggleComplete() {
+    try {
+      await setDayComplete(sb, dia, !dayComplete);
+      setDayComplete_(!dayComplete);
+      toast(!dayComplete ? t("consumo.diaCompletoOk") : t("consumo.diaReaberto"));
+    } catch {
+      toast(t("comum.erroGuardar"), { kind: "erro" });
+    }
   }
 
   async function fillFromPlan() {
@@ -339,6 +400,9 @@ export default function HojePage() {
               source={source}
               deficitTarget={profile?.deficit_alvo_kcal}
               isToday={isToday}
+              planned={statesOn ? dt.planned.kcal : undefined}
+              pending={statesOn ? dt.pending.kcal : undefined}
+              status={statesOn ? status : undefined}
             />
             <MacroCard totals={totals} targets={calc?.targets} sex={profile?.sexo} water={water} />
             <ActivityCard oura={oura} health={health} source={source} />
@@ -371,9 +435,23 @@ export default function HojePage() {
                 onEdit={openEdit}
                 onRemove={remove}
                 onRepeat={() => repeatYesterday(nome, m.pos)}
-                repeatCount={yItems.filter((y) => y.refeicao === nome).length}
+                repeatCount={yItems.filter((y) => y.refeicao === nome && isConsumed(y)).length}
+                states={statesOn}
+                onConfirmMeal={(confirm) => confirmMeal(nome, m.items, confirm)}
+                onSetState={(it, st) => setStates([it.id], st)}
               />
             ))}
+
+            {statesOn && dayComplete !== null && items.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-3 text-sm">
+                <span className="text-muted">
+                  {status === "completo" ? t("consumo.estadoCompleto") : status === "parcial" ? t("consumo.estadoParcial") : t("consumo.estadoSemRegisto")}
+                </span>
+                <button className="btn btn-ghost !min-h-10" onClick={toggleComplete} aria-pressed={!!dayComplete}>
+                  <Icon name="check" size={18} /> {dayComplete ? t("consumo.reabrirDia") : t("consumo.marcarCompleto")}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

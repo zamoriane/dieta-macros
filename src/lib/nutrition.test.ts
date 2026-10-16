@@ -65,6 +65,22 @@ test("alertas", () => {
   assert.equal(alerts.length, 4);
 });
 
+test("alertas com plano por confirmar: não acusa proteína baixa nem excedente de dia parcial", () => {
+  const base = {
+    totals: { kcal: 900, protein: 60, carbs: 80, fat: 30, fiber: 10 },
+    targets: { kcal: 1900, protein: 160, fat: 53, carbs: 194 },
+    balance: energyBalance({ bmr: 1800, intakeKcal: 2600, activityCorrection: 0.85, manualActivityFactor: 1.3 }),
+    lowIntakeStreak: 0, minKcal: 1500, hasWeightLast7d: true,
+  };
+  const today = buildAlerts({ ...base, hour: 21, isToday: true, pendingKcal: 800 }).map((a) => a.key);
+  assert.ok(today.includes("alert.porConfirmar"));
+  assert.ok(!today.includes("alert.proteinaBaixa"));
+  const past = buildAlerts({ ...base, hour: 10, isToday: false, pendingKcal: 0, complete: false }).map((a) => a.key);
+  assert.ok(!past.includes("alert.excedente"));
+  const pastDone = buildAlerts({ ...base, hour: 10, isToday: false, complete: true }).map((a) => a.key);
+  assert.ok(pastDone.includes("alert.excedente"));
+});
+
 import { waterReference } from "./nutrition.ts";
 
 test("referência de água", () => {

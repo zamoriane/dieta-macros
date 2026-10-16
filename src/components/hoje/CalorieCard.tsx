@@ -58,6 +58,9 @@ export function CalorieCard({
   source,
   deficitTarget,
   isToday,
+  planned,
+  pending,
+  status: dayStatus,
 }: {
   totals: Macros;
   targets?: Targets;
@@ -67,6 +70,10 @@ export function CalorieCard({
   source: "oura" | "apple";
   deficitTarget?: number;
   isToday: boolean;
+  /** kcal planeadas para o dia e ainda por confirmar (só com a migração 0012) */
+  planned?: number;
+  pending?: number;
+  status?: "sem_registo" | "parcial" | "completo";
 }) {
   const { t } = useI18n();
   if (!targets || !balance) {
@@ -84,7 +91,8 @@ export function CalorieCard({
     );
   }
 
-  const st = status(t, totals.kcal, targets.kcal);
+  const st =
+    totals.kcal === 0 && (pending ?? 0) > 0 ? { tone: "neutral" as Tone, text: t("consumo.nadaConfirmado") } : status(t, totals.kcal, targets.kcal);
   const deficit = balance.deficit;
   const deficitLabel = deficit >= 0 ? (isToday ? t("cal.deficePrevisto") : t("cal.deficeDia")) : isToday ? t("cal.excedentePrevisto") : t("cal.excedenteDia");
   const deficitTone = deficit < 0 ? "text-bad" : deficitTarget && deficit >= deficitTarget * 0.8 ? "text-good" : "text-ink";
@@ -127,6 +135,12 @@ export function CalorieCard({
               }
             />
           </dl>
+          {planned != null && planned > 0 && (
+            <p className="tabular text-xs text-muted">
+              {t("consumo.linhaPlano", { plano: planned, pendente: pending ?? 0 })}
+              {!isToday && dayStatus === "parcial" ? ` · ${t("consumo.estadoParcialCurto")}` : ""}
+            </p>
+          )}
         </div>
       </div>
 

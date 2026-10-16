@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ZERO, type Targets } from "@/lib/nutrition";
+import { rowMacros, rowStatus, type DailyTotalsRow, type DayStatus } from "@/lib/consumption";
 import { addDays, avgOuraActive, computeDay, getActivityDays, getClientProfile, isoDay, me as myId, type OuraDay, type Profile } from "@/lib/data";
 import { myLinks, type Link as TLink } from "@/lib/links";
 import { EmptyState, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
@@ -29,7 +30,8 @@ export default function ClientePage() {
   const [targets, setTargets] = useState<Targets | null>(null);
   const [tab, setTab] = useState<Tab>("plano");
   const [weights, setWeights] = useState<{ dia: string; kg: number }[]>([]);
-  const [days, setDays] = useState<CalDay[]>([]);
+  const [days, setDays] = useState<(CalDay & { estado: DayStatus })[]>([]);
+  const [adesao, setAdesao] = useState<{ comidos: number; total: number } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -56,16 +58,26 @@ export default function ClientePage() {
       const ws = (w ?? []).map((x) => ({ dia: x.dia as string, kg: Number(x.kg) }));
       setWeights(ws);
       const weightAt = (d: string) => [...ws].reverse().find((x) => x.dia <= d)?.kg ?? null;
-      const tBy = new Map((totals ?? []).map((t) => [t.dia as string, t]));
+      const tBy = new Map(((totals ?? []) as DailyTotalsRow[]).map((t) => [t.dia, t]));
       const aBy = new Map((act as OuraDay[]).map((a) => [a.dia, a]));
-      const out: CalDay[] = [];
+      const out: (CalDay & { estado: DayStatus })[] = [];
+      let comidos = 0;
+      let total = 0;
       for (let d = from; d <= today; d = addDays(d, 1)) {
         const t = tBy.get(d);
-        const m = t ? { kcal: Number(t.kcal), protein: Number(t.protein), carbs: Number(t.carbs), fat: Number(t.fat), fiber: Number(t.fiber) } : null;
+        // Só consumo confirmado pelo aluno; sem confirmação = sem registo (não é adesão nem zero)
+        const estado: DayStatus = t ? rowStatus(t, today) : "sem_registo";
+        const m = t && estado !== "sem_registo" ? rowMacros(t) : null;
         const c = m ? computeDay(p, weightAt(d), m, aBy.get(d) ?? null, d, { isToday: d === today, avgActive: avg }) : null;
-        out.push({ dia: d, kcal: m?.kcal ?? null, gasto: c?.balance.expenditure ?? null, deficit: c?.balance.deficit ?? null });
+        out.push({ dia: d, kcal: m?.kcal ?? null, gasto: c?.balance.expenditure ?? null, deficit: estado === "completo" ? (c?.balance.deficit ?? null) : null, estado });
+        // Adesão ao plano: itens do plano confirmados como comidos, entre os dias com registo
+        if (t && estado !== "sem_registo" && t.n_plano != null) {
+          comidos += Number(t.n_plano_comidos ?? 0);
+          total += Number(t.n_plano ?? 0);
+        }
       }
       setDays(out);
+      setAdesao(total ? { comidos, total } : null);
       const tc = computeDay(p, weightAt(today), ZERO, null, today, { isToday: true, avgActive: avg });
       setTargets(tc?.targets ?? null);
     })();
@@ -87,7 +99,9 @@ export default function ClientePage() {
   }
 
   const name = link.outra_nome ?? link.outra_email ?? t("cli.cliente");
-  const logged = days.filter((d) => d.kcal != null);
+  const logged = days.filter((d) => d.estado === "completo");
+  const nPartial = days.filter((d) => d.estado === "parcial").length;
+  const nNone = days.filter((d) => d.estado === "sem_registo").length;
   const avgKcal = logged.length ? Math.round(logged.reduce((s, d) => s + (d.kcal ?? 0), 0) / logged.length) : null;
   const deficitSum = logged.reduce((s, d) => s + (d.deficit ?? 0), 0);
 
@@ -142,11 +156,12 @@ export default function ClientePage() {
 
       {tab === "progresso" && link.perm_progresso && (
         <div className="space-y-5">
-          <section className="tabular grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <section className="tabular grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <Mini label={t("cli.mediaIngerida")} value={avgKcal != null ? `${avgKcal} kcal` : "–"} />
             <Mini label={t("cli.metaHoje")} value={targets ? `${targets.kcal} kcal` : "–"} />
             <Mini label={t("cli.deficeAcumulado")} value={logged.length ? `${deficitSum} kcal` : "–"} />
-            <Mini label={t("cli.diasRegisto")} value={`${logged.length}/14`} />
+            <Mini label={t("cli.diasEstado")} value={`${logged.length} / ${nPartial} / ${nNone}`} />
+            <Mini label={t("cli.adesao")} value={adesao ? t("cli.adesaoValor", adesao) : "–"} />
           </section>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <SectionCard title={t("cli.grafCalorias")}>

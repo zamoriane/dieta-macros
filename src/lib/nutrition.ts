@@ -125,6 +125,10 @@ export function buildAlerts(opts: {
   minKcal: number;
   hasWeightLast7d: boolean;
   sleepScore?: number | null;
+  /** kcal do plano ainda por confirmar (planeado/legado) — os totais podem estar incompletos */
+  pendingKcal?: number;
+  /** o registo do dia está completo? (dias passados) */
+  complete?: boolean;
 }): Alert[] {
   const a: Alert[] = [];
   const { totals, targets, balance } = opts;
@@ -132,14 +136,18 @@ export function buildAlerts(opts: {
   if (totals.kcal > targets.kcal * 1.05) {
     a.push({ level: "alerta", key: "alert.kcalAcima", vars: { kcal: totals.kcal, meta: targets.kcal } });
   }
-  if (opts.isToday && opts.hour >= 18 && totals.protein < targets.protein * 0.75) {
+  const pending = opts.pendingKcal ?? 0;
+  if (pending > 0 && (!opts.isToday || opts.hour >= 20)) {
+    a.push({ level: "info", key: opts.isToday ? "alert.porConfirmar" : "alert.porConfirmarDia", vars: { kcal: Math.round(pending) } });
+  }
+  if (opts.isToday && opts.hour >= 18 && pending === 0 && totals.protein < targets.protein * 0.75) {
     a.push({
       level: "aviso",
       key: "alert.proteinaBaixa",
       vars: { p: totals.protein, meta: targets.protein, falta: Math.round(targets.protein - totals.protein) },
     });
   }
-  if (!opts.isToday && balance.deficit < 0) {
+  if (!opts.isToday && opts.complete !== false && balance.deficit < 0) {
     a.push({ level: "aviso", key: "alert.excedente", vars: { kcal: -balance.deficit } });
   }
   if (opts.lowIntakeStreak >= 3) {

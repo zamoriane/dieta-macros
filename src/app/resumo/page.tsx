@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { adaptiveTdee, KCAL_PER_KG } from "@/lib/nutrition";
+import { rowMacros, rowStatus, type DailyTotalsRow, type DayStatus } from "@/lib/consumption";
 import { addDays, avgOuraActive, computeDay, getActivityDays, getProfile, isoDay, type OuraDay, type Profile } from "@/lib/data";
 import { PageHeader, SectionCard, Skeleton, StatusBadge } from "@/components/ui/Primitives";
 import { Icon } from "@/components/ui/Icon";
@@ -21,6 +22,7 @@ type Row = {
   deficit: number | null;
   peso: number | null;
   sono: number | null;
+  estado: DayStatus;
 };
 
 function range(period: Period, offset: number): [string, string] {
@@ -66,7 +68,7 @@ export default function ResumoPage() {
         sb.from("weights").select("dia,kg").eq("user_id", p.id).gte("dia", histFrom).lte("dia", today).order("dia"),
         avgOuraActive(sb, today, 14, src),
       ]);
-      const tByDay = new Map((totals ?? []).map((t) => [t.dia as string, t]));
+      const tByDay = new Map(((totals ?? []) as DailyTotalsRow[]).map((t) => [t.dia, t]));
       const oByDay = new Map((oura as OuraDay[]).map((o) => [o.dia, o]));
       const ws = (wdata ?? []).map((w) => ({ dia: w.dia as string, kg: Number(w.kg) }));
       setWeights(ws);
@@ -76,9 +78,9 @@ export default function ResumoPage() {
       for (let d = from; d <= to && d <= today; d = addDays(d, 1)) {
         const t = tByDay.get(d);
         const o = oByDay.get(d) ?? null;
-        const totalsM = t
-          ? { kcal: Number(t.kcal), protein: Number(t.protein), carbs: Number(t.carbs), fat: Number(t.fat), fiber: Number(t.fiber) }
-          : null;
+        // Só consumo confirmado; dia sem nada confirmado = sem registo (nunca "0 kcal")
+        const estado: DayStatus = t ? rowStatus(t, today) : "sem_registo";
+        const totalsM = t && estado !== "sem_registo" ? rowMacros(t) : null;
         const calc = totalsM ? computeDay(p, weightAt(d), totalsM, o, d, { isToday: d === today, avgActive }) : null;
         out.push({
           dia: d,
@@ -87,9 +89,11 @@ export default function ResumoPage() {
           carbs: totalsM?.carbs ?? null,
           fat: totalsM?.fat ?? null,
           gasto: calc?.balance.expenditure ?? null,
-          deficit: calc?.balance.deficit ?? null,
+          // défice só em dias completos: num dia parcial seria artificialmente alto
+          deficit: estado === "completo" ? (calc?.balance.deficit ?? null) : null,
           peso: ws.find((w) => w.dia === d)?.kg ?? null,
           sono: o?.sleep_score ?? null,
+          estado,
         });
       }
       setRows(out);
@@ -98,15 +102,16 @@ export default function ResumoPage() {
       const hist: { intake: number | null; weight: number | null }[] = [];
       for (let d = addDays(today, -28); d < today; d = addDays(d, 1)) {
         const t = tByDay.get(d);
-        hist.push({ intake: t ? Number(t.kcal) : null, weight: ws.find((w) => w.dia === d)?.kg ?? null });
+        hist.push({ intake: t && rowStatus(t, today) === "completo" ? Number(t.kcal) : null, weight: ws.find((w) => w.dia === d)?.kg ?? null });
       }
       setTdee(adaptiveTdee(hist));
       setLoading(false);
     })();
   }, [sb, from, to, today]);
 
-  // Só dias com registo entram nas médias; dias sem registo nunca contam como zero.
-  const logged = rows.filter((r) => r.kcal != null);
+  // Só dias completos entram nas médias; dias parciais ou sem registo nunca contam como consumo total.
+  const logged = rows.filter((r) => r.estado === "completo");
+  const partial = rows.filter((r) => r.estado === "parcial").length;
   const avg = (k: keyof Row) => {
     const v = logged.map((r) => r[k] as number | null).filter((x): x is number => x != null);
     return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null;
@@ -175,7 +180,7 @@ export default function ResumoPage() {
           <Kpi
             label={t("resumo.consistencia")}
             value={`${logged.length}/${elapsed}`}
-            unit={t("resumo.diasRegistados")}
+            unit={partial ? t("resumo.diasCompletosParciais", { n: partial }) : t("resumo.diasCompletos")}
             estLabel={t("resumo.estim")}
             className="col-span-2 lg:col-span-1"
           />
@@ -228,7 +233,10 @@ export default function ResumoPage() {
                     </td>
                   ) : (
                     <>
-                      <td className="px-3 text-right font-medium">{fmtN(r.kcal)}</td>
+                      <td className="px-3 text-right font-medium">
+                        {fmtN(r.kcal)}
+                        {r.estado === "parcial" && <span className="ml-1 text-[10px] font-normal text-muted">{t("consumo.estadoParcialCurto")}</span>}
+                      </td>
                       <td className="px-3 text-right">{r.gasto != null ? fmtN(r.gasto) : "–"}</td>
                       <td className={`px-3 text-right font-semibold ${r.deficit == null ? "" : r.deficit >= 0 ? "text-good" : "text-warn"}`}>
                         {r.deficit != null ? `${r.deficit < 0 ? "+" : ""}${fmtN(Math.abs(r.deficit))}` : "–"}
@@ -258,6 +266,7 @@ export default function ResumoPage() {
                   <span className="tabular text-sm">
                     <span className="font-semibold">{fmtN(r.kcal)}</span>
                     <span className="text-muted"> / {r.gasto != null ? fmtN(r.gasto) : "–"} kcal</span>
+                    {r.estado === "parcial" && <span className="ml-1 text-[10px] text-muted">{t("consumo.estadoParcialCurto")}</span>}
                   </span>
                 )}
               </div>

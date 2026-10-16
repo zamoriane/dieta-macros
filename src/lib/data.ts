@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Workout } from "@/lib/applehealth";
 import { scale, sum, ageOn, bmrMifflin, energyBalance, dailyTargets, type Macros } from "@/lib/nutrition";
+import type { ItemState } from "@/lib/consumption";
 
 export type Food = {
   id: number;
@@ -57,6 +58,10 @@ export type LogItem = {
   carbs: number;
   fat: number;
   fiber: number;
+  /** Ausentes antes da migração 0012 (aí tudo contava como consumido). */
+  estado?: ItemState;
+  estado_origem?: "utilizador" | "inferido" | "migracao";
+  confirmado_em?: string | null;
 };
 
 export type PlanMeal = { id: number; nome: string; hora: string | null; posicao: number };
@@ -148,7 +153,11 @@ export async function ensureDay(sb: SupabaseClient, dia: string, copyPlan = true
   return true;
 }
 
-/** Copia os itens do plano base para o dia (usado na criação do dia ou num dia que ficou vazio). */
+/**
+ * Copia os itens do plano base para o dia (usado na criação do dia ou num dia que ficou vazio).
+ * Os itens entram como "planeado" (a base de dados decide: têm gramas_plano e não vêm confirmados),
+ * por isso abrir o dia não soma nada ao ingerido.
+ */
 export async function applyPlanToDay(sb: SupabaseClient, dia: string): Promise<number> {
   const userId = await me(sb);
   const { meals, items } = await getPlan(sb, userId);
@@ -198,17 +207,40 @@ export async function addLogItem(sb: SupabaseClient, dia: string, refeicao: stri
   if (error) throw error;
 }
 
-/** Altera a quantidade recalculando o snapshot a partir do alimento. */
+/**
+ * Altera a quantidade escalando os valores guardados no próprio registo (não os do catálogo),
+ * para uma atualização do alimento no catálogo não mudar em silêncio o histórico.
+ */
 export async function updateLogGrams(sb: SupabaseClient, item: LogItem, gramas: number) {
-  let macros: Macros;
-  if (item.food_id) {
-    const { data: food } = await sb.from("foods").select("*").eq("id", item.food_id).single();
-    macros = scale(food as Food, gramas);
-  } else {
-    const f = gramas / Number(item.gramas);
-    macros = { kcal: item.kcal * f, protein: item.protein * f, carbs: item.carbs * f, fat: item.fat * f, fiber: item.fiber * f };
-  }
+  const f = gramas / Number(item.gramas);
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const macros: Macros = {
+    kcal: r1(Number(item.kcal) * f),
+    protein: r1(Number(item.protein) * f),
+    carbs: r1(Number(item.carbs) * f),
+    fat: r1(Number(item.fat) * f),
+    fiber: r1(Number(item.fiber) * f),
+  };
   const { error } = await sb.from("log_items").update({ gramas, ...macros }).eq("id", item.id);
+  if (error) throw error;
+}
+
+/** Diário com estados (migração 0012 aplicada)? */
+export function hasStates(items: LogItem[]): boolean {
+  return items.some((i) => i.estado !== undefined);
+}
+
+/** Muda o estado de vários itens (confirmar, desfazer, não comido). */
+export async function setItemsState(sb: SupabaseClient, ids: number[], estado: ItemState) {
+  if (!ids.length) return;
+  const { error } = await sb.from("log_items").update({ estado }).in("id", ids);
+  if (error) throw error;
+}
+
+/** Marca (ou desmarca) o dia como completo. */
+export async function setDayComplete(sb: SupabaseClient, dia: string, completo: boolean) {
+  const uid = await me(sb);
+  const { error } = await sb.from("days").update({ completo }).eq("user_id", uid).eq("dia", dia);
   if (error) throw error;
 }
 
