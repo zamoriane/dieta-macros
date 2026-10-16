@@ -7,7 +7,7 @@ export const STALE_DAYS = 30;
 
 async function page(offset: number): Promise<{ count: number; results: WgerExerciseInfo[] }> {
   const r = await fetch(`${WGER_BASE}/api/v2/exerciseinfo/?format=json&limit=${PAGE}&offset=${offset}`, {
-    headers: { Accept: "application/json", "User-Agent": "DietaMacros/1.0 (+https://dieta-macros.vercel.app)" },
+    headers: { Accept: "application/json", "User-Agent": "DietaMacros/1.0 (+https://takingcare.pt)" },
     cache: "no-store",
   });
   if (!r.ok) throw new Error(`wger ${r.status}`);

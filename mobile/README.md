@@ -1,6 +1,6 @@
 # App nativa (iOS / Android)
 
-A app nativa abre o site `https://dieta-macros.vercel.app` (Capacitor, `server.url`) e acrescenta funções do telemóvel:
+A app nativa abre o site `https://takingcare.pt` (Capacitor, `server.url`) e acrescenta funções do telemóvel:
 leitura da **Apple Saúde** (iPhone) e do **Health Connect** (Android) com `@capgo/capacitor-health`.
 As alterações ao site aparecem logo na app; só mudanças nativas (plugins, permissões, ícones) precisam de novo build e revisão.
 
@@ -28,4 +28,4 @@ O site deteta a app com `window.Capacitor` (ver `src/lib/nativeHealthClient.ts`)
 
 - Conta de demonstração com dados para o revisor (ver `supabase/seeds/`).
 - Notas para o revisor: a Saúde serve para calcular o gasto energético e o défice; o modo treinador; apagar conta em Perfil → Conta e segurança.
-- Privacidade: `https://dieta-macros.vercel.app/privacidade`.
+- Privacidade: `https://takingcare.pt/privacidade`.

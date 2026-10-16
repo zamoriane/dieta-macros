@@ -3,9 +3,14 @@
   "appName": "Taking care",
   "webDir": "www",
   "server": {
-    "url": "https://dieta-macros.vercel.app",
+    "url": "https://takingcare.pt",
     "cleartext": false,
-    "errorPath": "offline.html"
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "takingcare.pt",
+      "www.takingcare.pt",
+      "dieta-macros.vercel.app"
+    ]
   },
   "ios": {
     "contentInset": "never",

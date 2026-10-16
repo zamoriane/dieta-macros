@@ -2,7 +2,7 @@
   "name": "taking-care-mobile",
   "version": "1.0.0",
   "private": true,
-  "description": "App nativa (iOS/Android) que abre https://dieta-macros.vercel.app e dá acesso à Apple Saúde / Health Connect.",
+  "description": "App nativa (iOS/Android) que abre https://takingcare.pt e dá acesso à Apple Saúde / Health Connect.",
   "scripts": {
     "ios:prepare": "sh scripts/prepare-ios.sh"
   },

@@ -22,7 +22,7 @@ App web responsivo (PC, tablet, telemóvel) para organizar a dieta por macronutr
 1. Crie um projeto em https://supabase.com, **região Frankfurt (eu-central-1)**.
 2. **SQL Editor → New query**: cole o conteúdo de `supabase/migrations/0001_init.sql` e clique **Run**.
 3. **Project Settings → API**: copie `Project URL`, `anon public` e `service_role`.
-4. **Authentication → URL Configuration**: em *Site URL* coloque o endereço do app na Vercel (ex.: `https://dieta-macros.vercel.app`).
+4. **Authentication → URL Configuration**: em *Site URL* coloque o endereço do app na Vercel (ex.: `https://takingcare.pt`).
 
 ### 2. Vercel
 1. Em https://vercel.com → **Add New → Project** → importe `zamoriane/dieta-macros`.
