@@ -16,8 +16,12 @@ public class VictusPlugin extends Plugin {
         try {
             var state = VictusStore.transaction(getContext(), s -> {
                 if (!owner.equals(s.optString("owner"))) {
+                    var archives = s.optJSONObject("archives"); if (archives == null) archives = new JSONObject();
+                    String previous = s.optString("owner"); var old = s.optJSONArray("pending");
+                    if (!previous.isEmpty() && old != null && old.length() > 0) archives.put(previous, old);
+                    var restored = archives.optJSONArray(owner); archives.remove(owner);
                     var keys = new ArrayList<String>(); s.keys().forEachRemaining(keys::add); keys.forEach(s::remove);
-                    s.put("owner", owner).put("pending", new JSONArray());
+                    s.put("owner", owner).put("pending", restored == null ? new JSONArray() : restored).put("archives", archives);
                 }
                 var pending = s.optJSONArray("pending");
                 if (pending != null) for (int i = 0; i < pending.length(); i++) pending.getJSONObject(i).put("attempted", true);
@@ -46,7 +50,14 @@ public class VictusPlugin extends Plugin {
     @PluginMethod public void clear(PluginCall call) {
         try {
             VictusStore.transaction(getContext(), s -> {
+                var archives = s.optJSONObject("archives"); if (archives == null) archives = new JSONObject();
+                String owner = s.optString("owner"); var pending = s.optJSONArray("pending");
+                if (!owner.isEmpty()) {
+                    if (Boolean.TRUE.equals(call.getBoolean("purge", false))) archives.remove(owner);
+                    else if (pending != null && pending.length() > 0) archives.put(owner, pending);
+                }
                 var keys = new ArrayList<String>(); s.keys().forEachRemaining(keys::add); keys.forEach(s::remove);
+                s.put("archives", archives);
             });
             VictusWidget.updateAll(getContext()); call.resolve();
         } catch (Exception e) { call.reject("Unable to clear Victus", e); }

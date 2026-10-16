@@ -20,7 +20,8 @@ public enum VictusStore {
             value = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any] ?? [:]
         }
         change(&value)
-        try JSONSerialization.data(withJSONObject: value).write(to: url, options: [.atomic, .completeUntilFirstUserAuthentication])
+        try JSONSerialization.data(withJSONObject: value).write(to: url, options: .atomic)
+        try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: url.path)
         return value
     }
     public static func day(_ date: Date = Date()) -> String {

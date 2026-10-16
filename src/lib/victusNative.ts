@@ -12,16 +12,16 @@ import { translate } from "./i18n/core";
 type Bridge = {
   read(o: { owner: string }): Promise<{ pending: VictusEvent[] }>;
   sync(o: { owner: string; snapshot: Record<string, unknown>; ackIds: string[] }): Promise<void>;
-  clear(): Promise<void>;
+  clear(o: { purge: boolean }): Promise<void>;
 };
 const native = registerPlugin<Bridge>("Victus");
 export const hasVictusWidget = () => Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("Victus");
 let running: Promise<void> | null = null;
 let epoch = 0;
 let queuedLocale: "pt" | "en" | null = null;
-export async function clearVictus() {
+export async function clearVictus(purge = false) {
   epoch++;
-  if (hasVictusWidget()) await native.clear();
+  if (hasVictusWidget()) await native.clear({ purge });
 }
 export function syncVictus(locale: "pt" | "en") {
   if (!hasVictusWidget()) return Promise.resolve();

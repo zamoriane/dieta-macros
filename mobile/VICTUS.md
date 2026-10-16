@@ -31,9 +31,10 @@ server insertion completed; newer taps remain pending. Entries marked attempted 
 in the widget while their network result is uncertain; after sync use the app's existing delete
 action. Queue capacity is 200. Open the app to synchronize before adding further entries.
 
-Logout clears the local widget. Switching accounts discards the previous account's local snapshot
-and pending entries rather than assigning them to the new account. **Open the app to sync before
-logging out or switching accounts.** Account deletion clears the widget. Revocation on another
+Logout clears the visible widget. Switching accounts hides the previous account's snapshot and
+archives its pending entries locally, restoring them only when that same account signs in again.
+Pending drinks are never assigned to another account. Account deletion purges that account's pending
+entries and clears the widget. Revocation on another
 device cannot remotely erase an offline widget; its last cached state remains until app refresh.
 Android excludes the snapshot/outbox from cloud backup and device transfer. iOS uses the App Group
 container with data protection until first unlock, and marks widget content privacy-sensitive.
