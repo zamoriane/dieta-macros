@@ -91,6 +91,8 @@ export default function LoginPage() {
       <div className="flex justify-end">
         <LanguageSwitch />
       </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icon-192.png" alt="" width={56} height={56} className="mt-2 h-14 w-14 rounded-2xl" />
       <h1 className="mt-4 text-3xl font-semibold tracking-tight">Taking care of yourself</h1>
       <p className="mt-1 text-muted">{t("app.tagline")}</p>
       <form onSubmit={submit} className="mt-8 space-y-3 rounded-2xl border border-line bg-card p-5">

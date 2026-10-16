@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 [ -d ios ] || npx cap add ios
-npx @capacitor/assets generate --ios --iconBackgroundColor '#0f766e' --splashBackgroundColor '#f5f7fa' --splashBackgroundColorDark '#0b1220'
+npx @capacitor/assets generate --ios --iconBackgroundColor '#016162' --splashBackgroundColor '#f5f7fa' --splashBackgroundColorDark '#0b1220'
 npx cap sync ios
 
 PLIST=ios/App/App/Info.plist
