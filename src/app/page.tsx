@@ -145,6 +145,11 @@ export default function HojePage() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    window.addEventListener("victus-synced", load);
+    return () => window.removeEventListener("victus-synced", load);
+  }, [load]);
+
   // Na app nativa: lê a Apple Saúde / Health Connect ao abrir (no máximo de 30 em 30 min).
   useEffect(() => {
     autoSyncHealth()
