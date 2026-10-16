@@ -7,6 +7,7 @@ import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { Icon } from "@/components/ui/Icon";
 import { FormField } from "@/components/ui/Primitives";
 import { useI18n } from "@/lib/i18n/client";
+import { SOURCE_LABEL, sourceCredit, type CatalogSource } from "@/lib/foodCatalog";
 
 type Props = {
   title?: string;
@@ -14,7 +15,7 @@ type Props = {
   onClose: () => void;
 };
 
-/** Pesquisa e adição de alimentos: recentes, pesquisa (base local + Calorie API), alimento próprio. */
+/** Pesquisa e adição de alimentos: recentes, pesquisa (catálogo INSA/TACO + base local + Calorie API), alimento próprio. */
 export function FoodPicker({ title, onPick, onClose }: Props) {
   const { t } = useI18n();
   const sb = useMemo(() => createClient(), []);
@@ -27,6 +28,8 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
   const [grams, setGrams] = useState("100");
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [more, setMore] = useState(false);
+  const [moreAvailable, setMoreAvailable] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Recentes: alimentos usados nos últimos 30 dias
@@ -53,6 +56,7 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
     if (timer.current) clearTimeout(timer.current);
     if (q.trim().length < 2) {
       setFoods([]);
+      setMoreAvailable(false);
       setLoading(false);
       return;
     }
@@ -60,17 +64,18 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
     timer.current = setTimeout(async () => {
       setErr(null);
       try {
-        const res = await fetch(`/api/foods/search?q=${encodeURIComponent(q.trim())}`);
+        const res = await fetch(`/api/foods/search?q=${encodeURIComponent(q.trim())}${more ? "&mais=1" : ""}`);
         const j = await res.json();
         setFoods(j.foods ?? []);
+        setMoreAvailable(!!j.maisDisponivel);
         if (j.apiError) setErr(j.apiError);
       } catch (e) {
         setErr(String(e));
       } finally {
         setLoading(false);
       }
-    }, 400);
-  }, [q]);
+    }, more ? 0 : 400);
+  }, [q, more]);
 
   const g = Number(grams.replace(",", "."));
   const preview = selected && g > 0 ? scale(selected, g) : null;
@@ -130,7 +135,9 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
         <div className="space-y-4">
           <p className="text-xs text-muted">
             {t("food.kcalPor100", { kcal: Math.round(Number(selected.kcal_100g)) })}{selected.brand ? ` · ${selected.brand}` : ""}
+            {selected.grupo ? ` · ${selected.grupo}` : ""}
           </p>
+          {selected.unidade === "ml" && <p className="text-xs text-muted">{t("food.mlNota")}</p>}
           <GramsInput value={grams} onChange={setGrams} />
           {selected.portions?.length > 0 && (
             <div className="flex flex-wrap gap-2">
@@ -142,6 +149,8 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
             </div>
           )}
           {preview && <MacroPreview m={preview} />}
+          {selected.extra?.hidratos === "totais" && <p className="text-xs text-muted">{t("food.hidratosTotais")}</p>}
+          {sourceCredit(selected.source, selected.versao) && <p className="text-[11px] leading-snug text-muted">{sourceCredit(selected.source, selected.versao)}</p>}
         </div>
       </ResponsiveDialog>
     );
@@ -158,7 +167,10 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
             className="w-full !pl-10"
             placeholder={t("food.pesquisarPh")}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setMore(false);
+            }}
             aria-label={t("food.pesquisar")}
           />
         </div>
@@ -186,9 +198,12 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
                   <div className="truncate text-sm font-medium">
                     {f.name}
                     {f.source === "custom" && <span className="ml-1.5 rounded bg-accent-soft px-1.5 py-px text-[10px] font-semibold text-accent">{t("food.meu")}</span>}
+                    {(f.source === "insa" || f.source === "taco") && (
+                      <span className="ml-1.5 rounded bg-card-2 px-1.5 py-px text-[10px] font-semibold text-muted">{SOURCE_LABEL[f.source]}</span>
+                    )}
                   </div>
                   <div className="tabular mt-0.5 text-xs text-muted">
-                    {f.brand ? `${f.brand} · ` : ""}{t("macro.p")} {f.protein_100g} · {t("macro.c")} {f.carbs_100g} · {t("macro.g")} {f.fat_100g} <span className="opacity-70">/100 g</span>
+                    {f.brand ? `${f.brand} · ` : ""}{t("macro.p")} {f.protein_100g} · {t("macro.c")} {f.carbs_100g} · {t("macro.g")} {f.fat_100g} <span className="opacity-70">{f.unidade === "ml" ? t("food.por100ml") : "/100 g"}</span>
                   </div>
                 </div>
                 <div className="tabular shrink-0 text-right text-sm font-semibold">
@@ -202,6 +217,12 @@ export function FoodPicker({ title, onPick, onClose }: Props) {
       )}
 
       {!loading && q.trim().length >= 2 && foods.length === 0 && <p className="py-6 text-center text-sm text-muted">{t("food.nada", { q })}</p>}
+      {!loading && q.trim().length >= 2 && moreAvailable && (
+        <button className="btn btn-ghost mt-2 w-full !text-sm" onClick={() => setMore(true)}>
+          <Icon name="search" size={16} /> {t("food.procurarMais")}
+        </button>
+      )}
+      {!loading && <Credits sources={list.map((f) => f.source)} versions={list} />}
       {err && <p className="mt-2 text-xs text-warn">{err}</p>}
 
       <button className="btn btn-ghost mt-4 w-full" onClick={() => setCreating(true)}>
@@ -324,6 +345,19 @@ function CustomFoodForm({
           {t("comum.guardar")}
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Crédito obrigatório das tabelas oficiais usadas nos resultados. */
+function Credits({ sources, versions }: { sources: string[]; versions: Food[] }) {
+  const used = (["insa", "taco"] as CatalogSource[]).filter((s) => sources.includes(s));
+  if (!used.length) return null;
+  return (
+    <div className="mt-3 space-y-0.5 text-[11px] leading-snug text-muted">
+      {used.map((s) => (
+        <p key={s}>{sourceCredit(s, versions.find((f) => f.source === s)?.versao)}</p>
+      ))}
     </div>
   );
 }

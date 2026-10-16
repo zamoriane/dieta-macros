@@ -8,7 +8,7 @@ import type { ItemState } from "@/lib/consumption";
 export type Food = {
   id: number;
   user_id: string | null;
-  source: "calorieapi" | "custom";
+  source: "calorieapi" | "custom" | "insa" | "taco";
   name: string;
   brand: string | null;
   kcal_100g: number;
@@ -17,6 +17,12 @@ export type Food = {
   fat_100g: number;
   fiber_100g: number;
   portions: { label: string; grams: number }[];
+  // Catálogo oficial (migração 0013)
+  ativo?: boolean;
+  versao?: string | null;
+  grupo?: string | null;
+  unidade?: "g" | "ml";
+  extra?: Record<string, number | string>;
 };
 
 export type Profile = {

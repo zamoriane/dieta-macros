@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { toast } from "@/components/ui/Toast";
 import { useI18n } from "@/lib/i18n/client";
 import type { MessageKey } from "@/lib/i18n/core";
+import { CatalogImport } from "@/components/admin/CatalogImport";
 
 type U = {
   id: string;
@@ -36,6 +37,7 @@ const ACAO_LABEL: Record<string, MessageKey> = {
   aprovar_pt: "admin.feito.aprovar_pt",
   recusar_pt: "admin.feito.recusar_pt",
   remover_pt: "admin.feito.remover_pt",
+  importar_catalogo: "admin.feito.importar_catalogo",
 };
 const TITLE: Record<Acao, MessageKey> = {
   ativar: "admin.titulo.ativar",
@@ -220,6 +222,8 @@ export default function AdminPage() {
           </ul>
         )}
       </SectionCard>
+
+      <CatalogImport />
 
       <SectionCard title={t("admin.ultimasAcoes")}>
         {audit.length ? (
