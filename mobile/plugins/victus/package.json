@@ -1,0 +1,9 @@
+{
+  "name": "@takingcare/victus",
+  "version": "1.0.0",
+  "description": "Victus offline water widgets for Capacitor",
+  "main": "index.js",
+  "files": ["ios", "android", "TakingcareVictus.podspec", "Package.swift", "index.js"],
+  "capacitor": { "ios": { "src": "ios" }, "android": { "src": "android" } },
+  "peerDependencies": { "@capacitor/core": ">=8.0.0" }
+}

@@ -1,0 +1,44 @@
+name: Victus native compile checks
+on:
+  pull_request:
+    paths: ['mobile/**', '.github/workflows/victus-native.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - run: npm install --install-links
+        working-directory: mobile
+      - run: npm run android:prepare
+        working-directory: mobile
+      - run: bash gradlew assembleDebug --no-daemon
+        working-directory: mobile/android
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare unsigned simulator build
+        working-directory: mobile
+        run: |
+          export GEM_HOME="$RUNNER_TEMP/victus-gems"
+          export GEM_PATH="$GEM_HOME"
+          gem install xcodeproj --no-document
+          npm install --install-links
+          sh scripts/prepare-ios.sh
+      - name: Compile app and widget without signing or publishing
+        working-directory: mobile
+        run: xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
