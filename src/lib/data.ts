@@ -40,6 +40,7 @@ export type Profile = {
   pt_contacto_email?: string | null;
   pt_pedido_em?: string | null;
   trainer_code?: string | null;
+  agua?: unknown; // configuração da água (ver lib/water.ts)
 };
 
 export type LogItem = {

@@ -36,6 +36,9 @@ import { ActivityCard } from "@/components/hoje/ActivityCard";
 import { MealCard } from "@/components/hoje/MealCard";
 import { AlertsBar } from "@/components/hoje/AlertsBar";
 import { useI18n } from "@/lib/i18n/client";
+import { getWaterLogs, type WaterLog } from "@/lib/waterData";
+import { effectiveMl, goalMl as waterGoal, parseConfig as parseWater } from "@/lib/water";
+import { syncFromLogs } from "@/lib/waterReminders";
 import { autoSyncHealth } from "@/lib/nativeHealthClient";
 
 function greeting(t: ReturnType<typeof useI18n>["t"], name?: string | null) {
@@ -54,7 +57,7 @@ function strip(it: LogItem) {
 }
 
 export default function HojePage() {
-  const { t, df } = useI18n();
+  const { t, df, nf } = useI18n();
   const fmtLong = (iso: string) => df(iso, { weekday: "long", day: "numeric", month: "long" });
   const fmtShort = (iso: string) => df(iso, { weekday: "short", day: "numeric", month: "short" });
   const sb = useMemo(() => createClient(), []);
@@ -67,6 +70,7 @@ export default function HojePage() {
   const [weight, setWeight] = useState<{ dia: string; kg: number } | null>(null);
   const [oura, setOura] = useState<OuraDay | null>(null);
   const [health, setHealth] = useState<HealthDayRow | null>(null);
+  const [waterLogs, setWaterLogs] = useState<WaterLog[]>([]);
   const [lowStreak, setLowStreak] = useState(0);
   const [planMeals, setPlanMeals] = useState<{ nome: string; posicao: number }[]>([]);
   const [planItemCount, setPlanItemCount] = useState(0);
@@ -100,6 +104,7 @@ export default function HojePage() {
         avgOuraActive(sb, dia, 14, src),
         getHealthDays(sb, dia, dia),
       ]);
+      setWaterLogs(await getWaterLogs(sb, uid, dia, dia).catch(() => []));
       setItems(its);
       setYItems(yits);
       setWeight(w);
@@ -173,7 +178,18 @@ export default function HojePage() {
 
   // Referência de água: gasto do dia + minutos de treino (Watch)
   const workoutMin = (health?.workouts ?? []).reduce((s, w) => s + (w.min ?? 0), 0) || health?.exercise_min || 0;
-  const water = profile ? waterReference({ sex: profile.sexo, expenditureKcal: calc?.balance.expenditure, exerciseMin: workoutMin }) : undefined;
+  const waterRef = profile ? waterReference({ sex: profile.sexo, expenditureKcal: calc?.balance.expenditure, exerciseMin: workoutMin }) : undefined;
+  const waterCfg = useMemo(() => parseWater(profile?.agua), [profile]);
+  const waterGoalMl = waterGoal(waterCfg, waterRef?.drinks);
+  const water = waterRef
+    ? { ...waterRef, consumedMl: waterLogs.reduce((s, l) => s + effectiveMl(l.ml, l.fator), 0), goalMl: waterGoalMl, href: isToday ? "/agua" : `/agua?dia=${dia}` }
+    : undefined;
+
+  // Lembretes de água (app nativa): reagenda ao abrir o Hoje, com o que já se bebeu hoje
+  useEffect(() => {
+    if (!profile || !isToday || !waterCfg.lembretes.ativo) return;
+    syncFromLogs(waterCfg.lembretes, waterLogs, waterGoalMl, t, (n) => nf(n));
+  }, [profile, isToday, waterCfg, waterLogs, waterGoalMl, t, nf]);
 
   // Refeições: as do plano (mesmo vazias) + as que só existem no dia
   const meals = new Map<string, { pos: number; items: LogItem[] }>();

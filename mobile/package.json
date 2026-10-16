@@ -7,9 +7,10 @@
     "ios:prepare": "sh scripts/prepare-ios.sh"
   },
   "dependencies": {
+    "@capacitor/android": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
-    "@capacitor/android": "^8.0.0",
+    "@capacitor/local-notifications": "^8.0.0",
     "@capgo/capacitor-health": "^8.7.0",
     "@capgo/capacitor-social-login": "^8.0.0"
   },

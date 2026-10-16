@@ -1,5 +1,7 @@
 import type { Macros, Targets } from "@/lib/nutrition";
+import Link from "next/link";
 import { ProgressBar, SectionCard } from "@/components/ui/Primitives";
+import { Icon } from "@/components/ui/Icon";
 import { useI18n } from "@/lib/i18n/client";
 
 const MACROS = [
@@ -17,7 +19,7 @@ export function MacroCard({
   totals: Macros;
   targets?: Targets;
   sex?: "M" | "F" | null;
-  water?: { total: number; drinks: number; efsa: number; byEnergy: number; exercise: number };
+  water?: { total: number; drinks: number; efsa: number; byEnergy: number; exercise: number; consumedMl: number; goalMl: number; href: string };
 }) {
   const { t: tr, nf } = useI18n();
   // Referências de fibra: EFSA (2010) 25 g/dia adultos; IOM (2005) 38 g/dia homens ≤50, 25 g mulheres (14 g/1000 kcal)
@@ -63,26 +65,43 @@ export function MacroCard({
       </ul>
 
       {water && (
-        <details className="group mt-3 border-t border-line pt-3 text-sm">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
+        <div className="mt-3 border-t border-line pt-3 text-sm">
+          <div className="tabular mb-1.5 flex items-center justify-between gap-2">
             <span className="flex items-center gap-2 font-medium">
-              <span className="h-2.5 w-2.5 rounded-full bg-prot" aria-hidden="true" />
-              {tr("agua.titulo")}
+              <Icon name="drop" size={16} className="text-prot" />
+              {tr("agua.hojeTitulo")}
             </span>
-            <span className="tabular text-right">
-              <span className="font-semibold">≈ {nf(water.drinks)} L</span>
-              <span className="block text-[11px] text-muted">{tr("agua.beber", { total: nf(water.total) })}</span>
+            <span className="flex items-center gap-2">
+              <span>
+                <span className="font-semibold">{nf(Math.round(water.consumedMl / 100) / 10)}</span>
+                <span className="text-muted"> / {nf(Math.round(water.goalMl / 100) / 10)} L</span>
+              </span>
+              <Link href={water.href} className="btn btn-ghost !min-h-9 !px-3 text-xs">
+                <Icon name="plus" size={14} /> {tr("agua.registar")}
+              </Link>
             </span>
-          </summary>
-          <div className="mt-2 space-y-1 rounded-xl bg-card-2 p-3 text-xs text-muted">
-            <p>
-              {tr("agua.explica", { efsa: nf(water.efsa), energia: nf(water.byEnergy) })}
-              {water.exercise > 0 ? tr("agua.treino", { l: nf(water.exercise) }) : ""}
-              {tr("agua.alimentos")}
-            </p>
-            <p>{tr("agua.aviso")}</p>
           </div>
-        </details>
+          <ProgressBar
+            value={water.consumedMl}
+            target={water.goalMl}
+            color="prot"
+            label={tr("agua.bebido", { v: nf(Math.round(water.consumedMl / 100) / 10), meta: nf(Math.round(water.goalMl / 100) / 10) })}
+          />
+          <details className="group mt-2">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-xs text-muted hover:text-ink">
+              {tr("agua.comoCalculada")}
+              <Icon name="chevronDown" size={14} className="transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="mt-2 space-y-1 rounded-xl bg-card-2 p-3 text-xs text-muted">
+              <p>
+                {tr("agua.explica", { efsa: nf(water.efsa), energia: nf(water.byEnergy) })}
+                {water.exercise > 0 ? tr("agua.treino", { l: nf(water.exercise) }) : ""}
+                {tr("agua.alimentos")}
+              </p>
+              <p>{tr("agua.aviso")}</p>
+            </div>
+          </details>
+        </div>
       )}
     </SectionCard>
   );

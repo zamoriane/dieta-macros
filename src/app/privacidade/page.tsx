@@ -17,7 +17,8 @@ const PT: { title: string; intro: string; sections: Section[] } = {
         "Conta: email, palavra-passe (guardada cifrada pelo Supabase Auth), idioma e, se escolher, nome e foto de perfil.",
         "Se entrar com Google ou com a Apple: recebemos apenas o seu email (com a Apple pode ser um endereço reencaminhado que esconde o verdadeiro), o nome e um identificador da conta. Não acedemos a mais nada dessas contas.",
         "Perfil: sexo, data de nascimento, altura, metas e fatores de cálculo.",
-        "Registos: alimentos e quantidades, peso, medidas corporais (cintura, anca, pescoço e outras), plano alimentar, plano de treino e séries feitas.",
+        "Registos: alimentos e quantidades, água e outras bebidas, peso, medidas corporais (cintura, anca, pescoço e outras), plano alimentar, plano de treino e séries feitas.",
+        "Lembretes de água (se ativar na app): são agendados no próprio telemóvel como notificações locais; não passam por nenhum servidor.",
         "Oura (se ligar): resumos diários de atividade, calorias, passos, sono, prontidão e stress.",
         "Apple Saúde via Health Auto Export (se configurar): calorias ativas e basais, passos, minutos de exercício, sono, frequência cardíaca em repouso, variabilidade cardíaca, peso e treinos, incluindo o percurso GPS dos treinos ao ar livre.",
         "Registos técnicos mínimos (ex.: data do último envio do iPhone) para diagnosticar problemas.",
@@ -40,7 +41,7 @@ const PT: { title: string; intro: string; sections: Section[] } = {
     {
       h: "Partilha com treinadores",
       p: [
-        "Um treinador só vê os seus dados se se ligar a ele com o código dele, e apenas o que autorizar: plano alimentar, progresso (registos, peso, medidas, atividade) e/ou plano de treino. Pode alterar as permissões ou terminar a ligação em Perfil → O meu treinador.",
+        "Um treinador só vê os seus dados se se ligar a ele com o código dele, e apenas o que autorizar: plano alimentar, progresso (registos, água, peso, medidas, atividade) e/ou plano de treino. Pode alterar as permissões ou terminar a ligação em Perfil → O meu treinador.",
       ],
     },
     {
@@ -86,7 +87,8 @@ const EN: typeof PT = {
         "Account: email, password (stored hashed by Supabase Auth), language and, if you choose, name and profile photo.",
         "If you sign in with Google or Apple: we only receive your email (with Apple this may be a relay address that hides your real one), your name and an account identifier. We don't access anything else in those accounts.",
         "Profile: sex, date of birth, height, goals and calculation factors.",
-        "Logs: foods and amounts, weight, body measurements (waist, hips, neck and others), meal plan, workout plan and sets done.",
+        "Logs: foods and amounts, water and other drinks, weight, body measurements (waist, hips, neck and others), meal plan, workout plan and sets done.",
+        "Water reminders (if you turn them on in the app): scheduled on your phone as local notifications; they don't go through any server.",
         "Oura (if connected): daily summaries of activity, calories, steps, sleep, readiness and stress.",
         "Apple Health via Health Auto Export (if set up): active and basal calories, steps, exercise minutes, sleep, resting heart rate, heart rate variability, weight and workouts, including the GPS route of outdoor workouts.",
         "Minimal technical logs (e.g. the date of the last iPhone upload) to diagnose problems.",
@@ -109,7 +111,7 @@ const EN: typeof PT = {
     {
       h: "Sharing with trainers",
       p: [
-        "A trainer only sees your data if you connect to them with their code, and only what you allow: meal plan, progress (logs, weight, measurements, activity) and/or workout plan. You can change permissions or end the connection in Profile → My trainer.",
+        "A trainer only sees your data if you connect to them with their code, and only what you allow: meal plan, progress (logs, water, weight, measurements, activity) and/or workout plan. You can change permissions or end the connection in Profile → My trainer.",
       ],
     },
     {
