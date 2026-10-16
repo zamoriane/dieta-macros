@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import { useI18n } from "@/lib/i18n/client";
@@ -10,135 +10,49 @@ export function VictusSync() {
   const { locale } = useI18n();
   const path = usePathname();
   const router = useRouter();
+  const launchHandled = useRef(false);
   useEffect(() => {
-    if (!Capacitor.isNativePlatfor…24415 tokens truncated…inks logged yet.",
-  "agua.conta": "counts {ml} mL",
-  "agua.registado": "{ml} mL of {bebida}",
-  "agua.apagado": "Entry deleted",
-  "agua.historico": "History",
-  "agua.dias": "{n} days",
-  "agua.media": "Average: {l} L/day",
-  "agua.diasMeta": "Goal reached on {n} of {total} days",
-  "agua.semHistorico": "No entries in this period.",
-  "agua.config": "Settings",
-  "agua.meta": "Daily drinks goal",
-  "agua.metaAuto": "Automatic: {l} L, based on today's energy expenditure and workouts.",
-  "agua.metaManualOn": "Set the goal manually",
-  "agua.metaMl": "Goal (mL)",
-  "agua.copos": "Quick buttons",
-  "agua.coposDica": "Up to 6 buttons, each with an amount and a drink.",
-  "agua.novoBotao": "Add button",
-  "agua.fatores": "Each drink counts part of its volume as water (e.g. coffee 80%, beer 50%). Approximate values.",
-  "agua.lembretes": "Reminders",
-  "agua.lembretesSoApp": "Reminders work in the iPhone app. A browser can't notify you when the page is closed.",
-  "agua.lembretesAtivo": "Remind me to drink water",
-  "agua.intervalo": "Interval",
-  "agua.cadaMin": "Every {n} min",
-  "agua.cadaH": "Every {n} h",
-  "agua.cadaHM": "Every {h} h {m} min",
-  "agua.inicio": "From",
-  "agua.fim": "Until",
-  "agua.diasSemana": "Days",
-  "agua.texto": "Notification text",
-  "agua.textoPh": "Time to drink water",
-  "agua.lembretesDica": "Smart: they only remind you one interval after your last logged drink and stop once you reach the daily goal.",
-  "agua.lembretesNegado": "Notifications are off for Taking care. Turn them on in Settings → Notifications → Taking care.",
-  "agua.lembretesAtualizar": "Install the latest version of the app (TestFlight) to use reminders.",
-  "agua.lembretesAgendados": "Saved · {n} reminders scheduled",
-  "agua.guardado": "Settings saved",
-  "agua.notif.titulo": "Time to drink water",
-  "agua.notif.hoje": "{l} L left to reach today's goal.",
-  "agua.notif.depois": "Have a glass of water.",
-  "agua.registar": "Log",
-  "agua.hojeTitulo": "Water",
-  "agua.comoCalculada": "How the goal is calculated",
-  "agua.cliente": "Water (drinks)",
-  "agua.erroQtd": "Enter an amount between 10 and 3000 mL.",
-  "agua.erroMeta": "The goal must be between 500 and 8000 mL.",
-  "agua.erroHoras": "The end time must be after the start time.",
-  "consumo.porConfirmar": "to confirm",
-  "consumo.legado": "old entry, unconfirmed",
-  "consumo.naoComido": "not eaten",
-  "consumo.comido": "eaten",
-  "consumo.naoComi": "Didn't eat",
-  "consumo.marcarNaoComido": "Mark {nome} as not eaten",
-  "consumo.porConfirmarN": "{n} of {total} to confirm",
-  "consumo.dePlaneado": "of {kcal} planned",
-  "consumo.confirmarRefeicao": "I ate this meal",
-  "consumo.desfazerConfirmacao": "Undo confirmation",
-  "consumo.dicaConfirmar": "Adjust amounts before or after confirming.",
-  "consumo.refeicaoConfirmada": "{nome} confirmed",
-  "consumo.confirmacaoDesfeita": "{nome} confirmation undone",
-  "consumo.nadaConfirmado": "Nothing confirmed yet",
-  "consumo.linhaPlano": "Planned: {plano} kcal · to confirm: {pendente} kcal",
-  "consumo.estadoParcialCurto": "partial log",
-  "consumo.estadoCompleto": "Day log complete.",
-  "consumo.estadoParcial": "Partial log: confirm what you ate or mark the day as complete.",
-  "consumo.estadoSemRegisto": "Nothing confirmed for this day yet.",
-  "consumo.marcarCompleto": "Mark day as complete",
-  "consumo.reabrirDia": "Reopen day",
-  "consumo.diaCompletoOk": "Day marked as complete",
-  "consumo.diaReaberto": "Day reopened",
-  "alert.porConfirmar": "You still have {kcal} kcal from your plan to confirm. Confirm what you ate so the totals are right.",
-  "alert.porConfirmarDia": "This day has {kcal} kcal from the plan unconfirmed; totals may be incomplete.",
-  "resumo.diasCompletos": "complete days",
-  "resumo.diasCompletosParciais": "complete days · {n} partial",
-  "cli.adesao": "Plan eaten",
-  "cli.adesaoValor": "{comidos} of {total} items",
-  "cli.diasEstado": "Complete / partial / no log",
-  "cat.titulo": "Food catalogue (official tables)",
-  "cat.explica": "Generic foods come from the official INSA (Portugal) and TACO (Brazil) tables. To update, download the official Excel file and upload it here: first review the differences, then confirm. Nothing is deleted — foods removed from the table become inactive and past logs don't change.",
-  "cat.semMigracao": "Migration 0013_catalogo.sql hasn't been run in Supabase yet.",
-  "cat.nAlimentos": "{n} foods",
-  "cat.vazio": "Not imported yet",
-  "cat.versao": "Version {v}",
-  "cat.nInativos": "{n} inactive",
-  "cat.ficheiro": "Official Excel file (.xlsx)",
-  "cat.ficheiroDica": "INSA: portfir-insa.min-saude.pt · TACO: nepa.unicamp.br. The source is detected from the file contents.",
-  "cat.analisar": "Analyse file",
-  "cat.aAnalisar": "Analysing…",
-  "cat.versaoCampo": "Version to record",
-  "cat.total": "In file",
-  "cat.novos": "New",
-  "cat.alterados": "Changed",
-  "cat.iguais": "Unchanged",
-  "cat.inativados": "Become inactive",
-  "cat.reativados": "{n} inactive foods become active again.",
-  "cat.planos": "Changed or inactivated foods are in the plan of {n} user(s). Plans will use the new values; already logged days don't change.",
-  "cat.exNovos": "Examples of new",
-  "cat.exAlterados": "Examples of changes",
-  "cat.exInativados": "Become inactive",
-  "cat.exIgnorados": "Skipped rows ({n})",
-  "cat.linha": "row {n}",
-  "cat.eMais": "and {n} more",
-  "cat.importar": "Import",
-  "cat.aImportar": "Importing…",
-  "cat.confirmarTitulo": "Confirm import",
-  "cat.confirmarTexto": "This will update the {fonte} catalogue to version {v}: {novos} new, {alterados} changed and {inativados} become inactive. It runs all at once — if anything fails, nothing changes.",
-  "cat.importado": "{fonte}: {n} foods imported",
-  "cat.historico": "Previous imports",
-  "cat.histLinha": "{total} foods ({novos} new, {alterados} changed, {inativados} inactivated)",
-  "cat.histIgnorados": "{n} skipped",
-  "food.por100ml": "/100 ml",
-  "food.mlNota": "Values per 100 ml (1 ml ≈ 1 g).",
-  "food.hidratosTotais": "Total carbohydrates (fibre included).",
-  "admin.feito.importar_catalogo": "Food catalogue imported",
-  "food.procurarMais": "Search more results (branded products)",
-  "victus.title": "Victus, your hydration companion",
-  "victus.progress": "Daily drinks goal progress",
-  "victus.sleepy": "Ready to start?",
-  "victus.grumpy": "Time for a glass?",
-  "victus.encouraging": "You’ve got this!",
-  "victus.happy": "Goal reached!",
-  "victus.hint": "Buttons follow your configured drinks. Only log what you have drunk.",
-  "victus.widgetTitle": "Victus on your Home Screen",
-  "victus.widgetSummary": "Log your drinks without opening the app.",
-  "victus.pendingInfo": "Widget entries sync when you open the app.",
-  "victus.addWidget": "Add widget",
-  "victus.updateApp": "Update the app to a version that includes the Victus widget.",
-  "victus.pinRequested": "Confirm the system request to add the widget. If no request appears, touch and hold the Home Screen, select Widgets and find Taking care / Victus.",
-  "victus.iosSteps": "Touch and hold an empty area on the Home Screen. Tap Edit → Add Widget (or +, depending on your iOS version). Find Taking care / Victus, choose a size, then tap Add Widget.",
-  "victus.androidSteps": "Touch and hold an empty area on the Home Screen, choose Widgets and find Taking care / Victus. Drag the widget onto the Home Screen.",
-  "victus.near": "Almost there!",
-  // @@END
-};
+    if (!Capacitor.isNativePlatform()) return;
+    const app = registerPlugin<{
+      getLaunchUrl(): Promise<{ url?: string }>;
+      addListener(event: string, callback: (event: { url?: string; isActive?: boolean }) => void): Promise<{ remove(): Promise<void> }>;
+    }>("App");
+    const open = ({ url }: { url?: string }) => { if (url === "takingcare://agua" || url === "takingcare://agua/") router.push("/agua"); };
+    if (!launchHandled.current) {
+      launchHandled.current = true;
+      void app.getLaunchUrl().then(open).catch(() => {});
+    }
+    const urlListener = app.addListener("appUrlOpen", open);
+    const activeListener = app.addListener("appStateChange", e => { if (e.isActive) void syncVictus(locale).catch(() => {}); });
+    return () => {
+      void urlListener.then(l => l.remove()).catch(() => {});
+      void activeListener.then(l => l.remove()).catch(() => {});
+    };
+  }, [router, locale]);
+  useEffect(() => {
+    const sync = () => { if (document.visibilityState === "visible") void syncVictus(locale).catch(() => {}); };
+    if (path.startsWith("/login") || path.startsWith("/conta-desativada")) void clearVictus().catch(() => {});
+    else sync();
+    const submit = (event: SubmitEvent) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement) || new URL(form.action).pathname !== "/auth/signout") return;
+      event.preventDefault();
+      void clearVictus().catch(() => {}).finally(() => HTMLFormElement.prototype.submit.call(form));
+    };
+    document.addEventListener("submit", submit, true);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("water-changed", sync);
+    window.addEventListener("online", sync);
+    window.addEventListener("focus", sync);
+    const timer = setInterval(sync, 60_000);
+    return () => {
+      document.removeEventListener("submit", submit, true);
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("water-changed", sync);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("focus", sync);
+      clearInterval(timer);
+    };
+  }, [locale, path]);
+  return null;
+}

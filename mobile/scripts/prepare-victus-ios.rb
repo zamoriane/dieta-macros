@@ -36,6 +36,7 @@ end
 target.build_configurations.each do |c|
   c.build_settings.merge!({
     'PRODUCT_BUNDLE_IDENTIFIER' => 'com.zamoriane.takingcare.VictusWidget',
+    'PRODUCT_NAME' => '$(TARGET_NAME)',
     'INFOPLIST_FILE' => 'VictusWidget/Info.plist', 'CODE_SIGN_ENTITLEMENTS' => 'VictusWidget/VictusWidget.entitlements',
     'SWIFT_VERSION' => '5.9', 'IPHONEOS_DEPLOYMENT_TARGET' => '17.0',
     'APPLICATION_EXTENSION_API_ONLY' => 'YES', 'SKIP_INSTALL' => 'YES',

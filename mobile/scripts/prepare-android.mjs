@@ -5,6 +5,9 @@ process.chdir(fileURLToPath(new URL('..', import.meta.url)));
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 if (!fs.existsSync('android')) execFileSync(npx, ['cap', 'add', 'android'], { stdio: 'inherit', shell: process.platform === 'win32' });
 execFileSync(npx, ['cap', 'sync', 'android'], { stdio: 'inherit', shell: process.platform === 'win32' });
+// Health Connect plugin requires API 26; Capacitor's generated template defaults to 24.
+const variables = 'android/variables.gradle';
+fs.writeFileSync(variables, fs.readFileSync(variables, 'utf8').replace(/minSdkVersion\s*=\s*\d+/, 'minSdkVersion = 26'));
 const manifest = 'android/app/src/main/AndroidManifest.xml';
 let xml = fs.readFileSync(manifest, 'utf8');
 if (!xml.includes('android:scheme="takingcare"')) {
