@@ -9,6 +9,7 @@ group_id = 'group.com.zamoriane.takingcare'
 app_entitlements = 'ios/App/App/App.entitlements'
 ent = Xcodeproj::Plist.read_from_path(app_entitlements)
 ent['com.apple.security.application-groups'] = [group_id]
+ent['aps-environment'] = 'production' # TestFlight/App Store; requires Push Notifications on the app App ID.
 Xcodeproj::Plist.write_to_path(ent, app_entitlements)
 
 dest = 'ios/App/VictusWidget'
