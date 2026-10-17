@@ -13,6 +13,7 @@ struct DrinkIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         try VictusStore.add(owner: owner, ml: ml, beverage: beverage)
         WidgetCenter.shared.reloadAllTimelines()
+        await VictusLive.shared.refresh()
         return .result()
     }
 }
@@ -23,7 +24,7 @@ struct UndoIntent: AppIntent {
     init() {}
     init(owner: String) { self.owner = owner }
     func perform() async throws -> some IntentResult {
-        try VictusStore.undo(owner: owner); WidgetCenter.shared.reloadAllTimelines(); return .result()
+        try VictusStore.undo(owner: owner); WidgetCenter.shared.reloadAllTimelines(); await VictusLive.shared.refresh(); return .result()
     }
 }
 struct WaterEntry: TimelineEntry { let date: Date; let state: [String: Any] }
@@ -91,7 +92,10 @@ struct VictusView: View {
         .privacySensitive()
     }
 }
-@main struct VictusWidget: Widget {
+@main struct VictusWidgets: WidgetBundle {
+    var body: some Widget { VictusWidget(); VictusLiveWidget() }
+}
+struct VictusWidget: Widget {
     let kind = "VictusWater"
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: WaterProvider()) { VictusView(entry: $0) }

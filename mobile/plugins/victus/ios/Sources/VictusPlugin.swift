@@ -1,11 +1,33 @@
 import Capacitor
 import WidgetKit
+import ActivityKit
 
 @objc(VictusPlugin)
 public class VictusPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "VictusPlugin"
     public let jsName = "Victus"
-    public let pluginMethods: [CAPPluginMethod] = ["read", "sync", "clear", "requestPin"].map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
+    public let pluginMethods: [CAPPluginMethod] = ["read", "sync", "clear", "requestPin", "liveStatus", "startLive", "stopLive"].map { CAPPluginMethod(name: $0, returnType: CAPPluginReturnPromise) }
+    @objc func liveStatus(_ call: CAPPluginCall) {
+        if #available(iOS 17.0, *) {
+            call.resolve(["supported": true, "enabled": ActivityAuthorizationInfo().areActivitiesEnabled,
+                          "active": Activity<VictusAttributes>.activities.contains { $0.activityState == .active }])
+        } else { call.resolve(["supported": false, "enabled": false, "active": false]) }
+    }
+    @objc func startLive(_ call: CAPPluginCall) {
+        if #available(iOS 17.0, *) {
+            Task { @MainActor in
+                do { try await VictusLive.shared.start(); call.resolve() }
+                catch { call.reject("Unable to start Live Activity", nil, error) }
+            }
+        } else { call.reject("Requires iOS 17") }
+    }
+    @objc func stopLive(_ call: CAPPluginCall) {
+        if #available(iOS 17.0, *) { Task { await VictusLive.shared.stop(); call.resolve() } }
+        else { call.resolve() }
+    }
+    private func refreshLive() {
+        if #available(iOS 17.0, *) { Task { await VictusLive.shared.refresh() } }
+    }
     @objc func read(_ call: CAPPluginCall) {
         guard let owner = call.getString("owner"), !owner.isEmpty else { call.reject("Missing owner"); return }
         do {
@@ -22,6 +44,7 @@ public class VictusPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
             }
             WidgetCenter.shared.reloadAllTimelines()
+            refreshLive()
             call.resolve(["pending": result["pending"] ?? []])
         } catch { call.reject("Unable to read Victus", nil, error) }
     }
@@ -34,7 +57,7 @@ public class VictusPlugin: CAPPlugin, CAPBridgedPlugin {
                 state["snapshot"] = snapshot
                 state["pending"] = (state["pending"] as? [[String: Any]] ?? []).filter { !ids.contains($0["id"] as? String ?? "") }
             }
-            WidgetCenter.shared.reloadAllTimelines(); call.resolve()
+            WidgetCenter.shared.reloadAllTimelines(); refreshLive(); call.resolve()
         } catch { call.reject("Unable to sync Victus", nil, error) }
     }
     @objc func clear(_ call: CAPPluginCall) {
@@ -47,7 +70,7 @@ public class VictusPlugin: CAPPlugin, CAPBridgedPlugin {
                 }
                 state = ["archives": archives]
             }
-            WidgetCenter.shared.reloadAllTimelines(); call.resolve()
+            WidgetCenter.shared.reloadAllTimelines(); refreshLive(); call.resolve()
         }
         catch { call.reject("Unable to clear Victus", nil, error) }
     }
