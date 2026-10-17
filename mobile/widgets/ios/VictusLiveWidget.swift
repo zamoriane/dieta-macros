@@ -2,6 +2,16 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+extension ActivityViewContext where Attributes == VictusAttributes {
+    var localVictus: VictusAttributes.ContentState? {
+        guard let state = try? VictusStore.transaction({ _ in }),
+              state["owner"] as? String == attributes.owner,
+              VictusConsent.choice(attributes.owner) == "accepted",
+              attributes.day == VictusStore.day(), Date() < attributes.expires else { return nil }
+        return VictusLive.shared.content(state)
+    }
+}
+
 struct VictusLiveWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: VictusAttributes.self) { context in
@@ -14,12 +24,12 @@ struct VictusLiveWidget: Widget {
             DynamicIsland {
                 DynamicIslandExpandedRegion(.center) { VictusLivePanel(context: context) }
             } compactLeading: {
-                Image(context.state.mood).resizable().scaledToFit().frame(width: 24, height: 24)
+                Image(context.localVictus?.mood ?? "sleepy").resizable().scaledToFit().frame(width: 24, height: 24)
             } compactTrailing: {
-                Text("\(Int(min(1, Double(context.state.consumed) / Double(max(1, context.state.goal))) * 100))%")
+                Text(context.localVictus.map { "\(Int(min(1, Double($0.consumed) / Double(max(1, $0.goal))) * 100))%" } ?? "—")
                     .font(.caption.monospacedDigit()).foregroundStyle(.mint)
             } minimal: {
-                Image(context.state.mood).resizable().scaledToFit()
+                Image(context.localVictus?.mood ?? "sleepy").resizable().scaledToFit()
             }
             .widgetURL(URL(string: "takingcare://agua"))
             .keylineTint(.mint)
@@ -30,7 +40,7 @@ struct VictusLiveWidget: Widget {
 struct VictusLivePanel: View {
     let context: ActivityViewContext<VictusAttributes>
     var body: some View {
-        let s = context.state
+        if let s = context.localVictus {
         let expired = context.isStale || context.attributes.day != VictusStore.day()
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -59,5 +69,9 @@ struct VictusLivePanel: View {
                 Text(s.english ? "\(s.pending) pending · open app to sync" : "\(s.pending) pendentes · abra a app para sincronizar").font(.caption2)
             }
         }.foregroundStyle(.white).privacySensitive()
+        } else {
+            Link("Victus · Taking Care", destination: URL(string: "takingcare://agua")!)
+                .foregroundStyle(.white).padding()
+        }
     }
 }

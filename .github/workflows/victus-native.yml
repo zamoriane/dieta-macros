@@ -1,11 +1,35 @@
 name: Victus native compile checks
 on:
   pull_request:
-    paths: ['mobile/**', '.github/workflows/victus-native.yml']
+    paths: ['mobile/**', 'src/lib/victus*', 'src/app/api/victus/**', 'src/app/api/cron/victus/**', 'supabase/**', '.github/workflows/victus-native.yml']
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Verify private tables and dispatch claims
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/victus_live_setup.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/migrations/0015_victus_live_consent.sql
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/victus_live.sql
   android:
     runs-on: ubuntu-latest
     steps:

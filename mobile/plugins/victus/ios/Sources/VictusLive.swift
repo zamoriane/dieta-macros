@@ -3,6 +3,18 @@ import AppIntents
 import WidgetKit
 import Foundation
 
+enum VictusConsent {
+    static let defaults = UserDefaults(suiteName: VictusStore.group)!
+    static func choice(_ owner: String) -> String { defaults.string(forKey: "live.choice." + owner) ?? "unknown" }
+    static func set(_ choice: String, owner: String) { defaults.set(choice, forKey: "live.choice." + owner) }
+    static func lastDay(_ owner: String) -> String? { defaults.string(forKey: "live.started." + owner) }
+    static func markStarted(_ owner: String) { defaults.set(VictusStore.day(), forKey: "live.started." + owner) }
+    static func purge(_ owner: String) {
+        defaults.removeObject(forKey: "live.choice." + owner)
+        defaults.removeObject(forKey: "live.started." + owner)
+    }
+}
+
 @available(iOS 17.0, *)
 struct VictusAttributes: ActivityAttributes {
     struct Cup: Codable, Hashable { let ml: Int; let beverage: String; let label: String }
@@ -24,9 +36,24 @@ struct VictusAttributes: ActivityAttributes {
 @available(iOS 17.0, *)
 actor VictusLive {
     static let shared = VictusLive()
-    func content(_ state: [String: Any]) -> VictusAttributes.ContentState? {
+    // Called only by the foreground app, never by an extension/background timer.
+    func foreground() async {
+        await refresh()
+        guard ActivityAuthorizationInfo().areActivitiesEnabled,
+              let state = try? VictusStore.transaction({ _ in }),
+              let owner = state["owner"] as? String,
+              VictusConsent.choice(owner) == "accepted",
+              VictusConsent.lastDay(owner) != VictusStore.day(),
+              let s = state["snapshot"] as? [String: Any], s["remindersActive"] as? Bool == true,
+              let value = content(state), value.consumed < value.goal else { return }
+        let c = Calendar.current, now = Date()
+        let minute = c.component(.hour, from: now) * 60 + c.component(.minute, from: now)
+        guard (s["days"] as? [Int] ?? []).contains(c.component(.weekday, from: now) - 1),
+              minute >= (s["start"] as? Int ?? 540), minute < (s["end"] as? Int ?? 1260) else { return }
+        try? await start()
+    }
+    nonisolated func content(_ state: [String: Any]) -> VictusAttributes.ContentState? {
         guard let s = state["snapshot"] as? [String: Any],
-              s["day"] as? String == VictusStore.day(),
               let goal = s["goalMl"] as? Int, goal > 0 else { return nil }
         let now = Date(), c = Calendar.current
         let consumed = VictusStore.consumed(state, at: now)
@@ -52,24 +79,32 @@ actor VictusLive {
         guard let owner = state["owner"] as? String, !owner.isEmpty, let value = content(state), value.consumed < value.goal else {
             throw NSError(domain: "VictusLive", code: 2, userInfo: [NSLocalizedDescriptionKey: "Open Water and sync today's goal first"])
         }
+        guard VictusConsent.choice(owner) == "accepted" else { return }
         if Activity<VictusAttributes>.activities.contains(where: { $0.attributes.owner == owner && $0.activityState == .active }) { return }
         let now = Date()
         let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))!
         let expiry = min(now.addingTimeInterval(8 * 3600), midnight)
         _ = try Activity.request(attributes: VictusAttributes(owner: owner, day: VictusStore.day(), expires: expiry),
                                  content: ActivityContent(state: value, staleDate: expiry), pushType: nil)
+        VictusConsent.markStarted(owner)
     }
     func stop() async {
         for a in Activity<VictusAttributes>.activities { await a.end(nil, dismissalPolicy: .immediate) }
     }
     func refresh() async {
         let state = (try? VictusStore.transaction { _ in }) ?? [:]
+        var visible = Set<String>()
         for a in Activity<VictusAttributes>.activities {
             guard a.attributes.owner == state["owner"] as? String,
+                  VictusConsent.choice(a.attributes.owner) == "accepted",
+                  ActivityAuthorizationInfo().areActivitiesEnabled,
                   a.attributes.day == VictusStore.day(), Date() < a.attributes.expires,
                   let value = content(state) else {
                 await a.end(nil, dismissalPolicy: .immediate); continue
             }
+            let key = a.attributes.owner + a.attributes.day
+            guard visible.insert(key).inserted else { await a.end(nil, dismissalPolicy: .immediate); continue }
+            VictusConsent.markStarted(a.attributes.owner)
             let update = ActivityContent(state: value, staleDate: a.attributes.expires)
             if value.consumed >= value.goal {
                 await a.end(update, dismissalPolicy: .after(Date().addingTimeInterval(60)))
@@ -88,6 +123,7 @@ struct VictusLiveDrink: LiveActivityIntent {
     init() {}
     init(owner: String, ml: Int, beverage: String) { self.owner = owner; self.ml = ml; self.beverage = beverage }
     func perform() async throws -> some IntentResult {
+        guard VictusConsent.choice(owner) == "accepted" else { return .result() }
         guard Activity<VictusAttributes>.activities.contains(where: {
             $0.attributes.owner == owner && $0.attributes.day == VictusStore.day() && Date() < $0.attributes.expires && $0.activityState == .active
         }) else { return .result() }
