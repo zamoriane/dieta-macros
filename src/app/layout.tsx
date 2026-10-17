@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { VictusSync } from "@/components/agua/VictusSync";
 import { Nav } from "@/components/Nav";
 import { ToastHost } from "@/components/ui/Toast";
 import { I18nProvider } from "@/lib/i18n/client";
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-dvh font-sans antialiased">
         <I18nProvider initial={locale}>
         <Nav />
+        <VictusSync />
         <main className="mx-auto w-full max-w-6xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 md:pb-12 md:pt-8">
           {children}
         </main>

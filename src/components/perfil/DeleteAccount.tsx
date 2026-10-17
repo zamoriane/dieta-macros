@@ -1,4 +1,5 @@
 "use client";
+import { clearVictus } from "@/lib/victusNative";
 import { useState } from "react";
 import { ResponsiveDialog } from "@/components/ui/ResponsiveDialog";
 import { FormField } from "@/components/ui/Primitives";
@@ -25,6 +26,7 @@ export function DeleteAccount({ email }: { email: string }) {
     const j = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) return setError(j.error ?? t("comum.erro"));
+    await clearVictus(true).catch(() => {});
     window.location.href = "/login?conta=apagada";
   }
 

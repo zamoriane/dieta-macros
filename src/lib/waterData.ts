@@ -1,4 +1,5 @@
 "use client";
+const notifyWaterChanged = () => { if (typeof window !== "undefined") window.dispatchEvent(new Event("water-changed")); };
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, computeDay, getActivityDays, avgOuraActive, getHealthDays, latestWeight, type Profile } from "@/lib/data";
 import { waterReference } from "@/lib/nutrition";
@@ -26,17 +27,20 @@ export async function addWater(sb: SupabaseClient, dia: string, ml: number, bebi
   if (dia !== iso) row.hora = new Date(dia + "T12:00:00").toISOString();
   const { data, error } = await sb.from("water_logs").insert(row).select("id, dia, hora, ml, bebida, fator").single();
   if (error) throw error;
+  notifyWaterChanged();
   return { ...data, ml: Number(data.ml), fator: Number(data.fator) } as WaterLog;
 }
 
 export async function deleteWater(sb: SupabaseClient, id: number) {
   const { error } = await sb.from("water_logs").delete().eq("id", id);
   if (error) throw error;
+  notifyWaterChanged();
 }
 
 export async function saveWaterConfig(sb: SupabaseClient, owner: string, cfg: WaterConfig) {
   const { error } = await sb.from("profiles").update({ agua: cfg }).eq("id", owner);
   if (error) throw error;
+  notifyWaterChanged();
 }
 
 /** Totais efetivos (mL que contam como água) por dia. */

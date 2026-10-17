@@ -1,4 +1,6 @@
 "use client";
+import { AddVictusWidget } from "@/components/agua/AddVictusWidget";
+import { VictusCard } from "@/components/agua/VictusCard";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -58,6 +60,11 @@ export default function AguaPage() {
 
   useEffect(() => {
     load();
+  }, [load]);
+
+  useEffect(() => {
+    window.addEventListener("victus-synced", load);
+    return () => window.removeEventListener("victus-synced", load);
   }, [load]);
 
   const goal = cfg ? calcGoal(cfg, autoL) : 0;
@@ -120,8 +127,12 @@ export default function AguaPage() {
         isToday={dia === today}
       />
 
-      {/* Progresso */}
-      <section className="card p-5">
+      {cfg && logs !== null && dia === today && <VictusCard cfg={cfg} consumed={consumed} goal={goal} onAdd={add} onOther={() => setOther(true)} />}
+
+      <AddVictusWidget />
+
+      {/* Past days retain their historical ring. Today uses Victus. */}
+      {dia !== today && <section className="card p-5">
         {logs === null || !cfg ? (
           <Skeleton className="h-40" />
         ) : (
@@ -151,7 +162,7 @@ export default function AguaPage() {
             </div>
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Registos do dia */}
       <SectionCard title={dia === today ? t("agua.registos") : t("agua.registosDia", { dia: df(dia, { day: "numeric", month: "long" }) })}>

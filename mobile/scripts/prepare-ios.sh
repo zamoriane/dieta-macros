@@ -74,4 +74,5 @@ t.build_configurations.each do |c|
 end
 p.save
 '
-echo "iOS pronto"
+ruby scripts/prepare-victus-ios.rb
+echo "iOS pronto (inclui Victus)"
