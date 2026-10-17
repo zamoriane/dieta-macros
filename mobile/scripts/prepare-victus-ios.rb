@@ -14,6 +14,8 @@ Xcodeproj::Plist.write_to_path(ent, app_entitlements)
 dest = 'ios/App/VictusWidget'
 FileUtils.mkdir_p(dest)
 FileUtils.cp('widgets/ios/VictusWidget.swift', dest)
+FileUtils.cp('widgets/ios/VictusLiveWidget.swift', dest)
+FileUtils.cp('plugins/victus/ios/Sources/VictusLive.swift', dest)
 FileUtils.cp('plugins/victus/ios/Sources/VictusStore.swift', dest)
 FileUtils.cp_r('widgets/ios/Assets.xcassets', dest)
 Xcodeproj::Plist.write_to_path({
@@ -28,7 +30,7 @@ Xcodeproj::Plist.write_to_path({'com.apple.security.application-groups' => [grou
 target = project.targets.find { |t| t.name == 'VictusWidget' } || project.new_target(:app_extension, 'VictusWidget', :ios, '17.0')
 files = project.main_group.find_subpath('VictusWidget', true)
 files.set_source_tree('<group>'); files.set_path('VictusWidget')
-%w[VictusWidget.swift VictusStore.swift Assets.xcassets].each do |name|
+%w[VictusWidget.swift VictusLiveWidget.swift VictusLive.swift VictusStore.swift Assets.xcassets].each do |name|
   ref = files.files.find { |f| f.path == name } || files.new_file(name)
   phase = name.end_with?('.swift') ? target.source_build_phase : target.resources_build_phase
   phase.add_file_reference(ref) unless phase.files_references.include?(ref)
@@ -55,6 +57,7 @@ project.save
 # Register our URL scheme without replacing Google sign-in URL types.
 plist_path = 'ios/App/App/Info.plist'
 plist = Xcodeproj::Plist.read_from_path(plist_path)
+plist['NSSupportsLiveActivities'] = true
 types = plist['CFBundleURLTypes'] ||= []
 types << {'CFBundleURLSchemes' => ['takingcare']} unless types.any? { |t| (t['CFBundleURLSchemes'] || []).include?('takingcare') }
 Xcodeproj::Plist.write_to_path(plist, plist_path)

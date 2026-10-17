@@ -1,5 +1,6 @@
 "use client";
 import { AddVictusWidget } from "@/components/agua/AddVictusWidget";
+import { VictusLiveActivity } from "@/components/agua/VictusLiveActivity";
 import { VictusCard } from "@/components/agua/VictusCard";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -130,6 +131,7 @@ export default function AguaPage() {
       {cfg && logs !== null && dia === today && <VictusCard cfg={cfg} consumed={consumed} goal={goal} onAdd={add} onOther={() => setOther(true)} />}
 
       <AddVictusWidget />
+      <VictusLiveActivity />
 
       {/* Past days retain their historical ring. Today uses Victus. */}
       {dia !== today && <section className="card p-5">
